@@ -1,0 +1,24 @@
+{
+  "name": "super-server-logs",
+  "version": "1.0.0",
+  "description": "Read and write server logs",
+  "author": "Joshua Wise <joshuathomaswise@gmail.com>",
+  "homepage": "https://github.com/WiseLibs/super-server-logs#readme",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/WiseLibs/super-server-logs.git"
+  },
+  "license": "MIT",
+  "main": "src/index.js",
+  "types": "src/types.d.ts",
+  "scripts": {
+    "test": "mocha --exit --slow=100 --timeout=5000"
+  },
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0"
+  },
+  "dependencies": {
+    "uuid": "^9.0.0"
+  }
+}
