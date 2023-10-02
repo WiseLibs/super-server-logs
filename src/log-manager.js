@@ -2,14 +2,12 @@
 const fs = require('fs');
 const path = require('path');
 const EventEmitter = require('events');
-const MasterLogger = require('./master-logger');
 
 /*
 	LogManager is used by a server cluster's master process to manage the logs
-	within a specified directory. It provides a MasterLogger for the master
-	process to use, and it provides the filename that worker processes should
-	use for their WorkerLoggers. Also, "rotate" events are periodically emitted,
-	indicating that a new filename should be used by workers.
+	within a specified directory. It provides the filename that should be used
+	to write new logs, and it periodically emits "rotate" events, indicating
+	that a new filename should be used.
 
 	Whenever a "rotate" event is emitted, the log directory is scanned and
 	obsolete log files are automatically deleted. To facilitate this, log files
@@ -60,7 +58,6 @@ module.exports = class LogManager extends EventEmitter {
 		this._dirname = null;
 		this._filename = null;
 		this._pollTimer = null;
-		this._logger = null;
 		this._closed = true;
 
 		if (dirname !== null) {
@@ -76,14 +73,6 @@ module.exports = class LogManager extends EventEmitter {
 				granularity
 			);
 		}
-	}
-
-	createLogger(options) {
-		if (!this._logger || this._logger.closed) {
-			const filename = this._closed ? null : path.join(this._dirname, 'master.log');
-			this._logger = new MasterLogger(filename, options);
-		}
-		return this._logger;
 	}
 
 	close() {

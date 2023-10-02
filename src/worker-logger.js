@@ -1,52 +1,148 @@
 'use strict';
+const cluster = require('cluster');
 const Logger = require('./logger');
 const RequestLogger = require('./request-logger');
-const constants = require('./constants');
+const EventTypes = require('./event-types');
 const getExceptionData = require('./get-exception-data');
+
+const WORKER_ID = cluster.isWorker ? cluster.worker.id : null;
 
 /*
 	A logger for recording changes within a server cluster's worker process.
  */
 
 module.exports = class WorkerLogger extends Logger {
-	constructor(filename, options) {
-		if (constants.WORKER_ID === null) {
-			throw new TypeError('WorkerLogger can only be used within a cluster worker process');
+	constructor(filename, { pingDelay = 1000 * 60, workerId = WORKER_ID, ...options } = {}) {
+		if (!Number.isInteger(pingDelay)) {
+			throw new TypeError('Expected options.pingDelay to be an integer');
 		}
+		if (!Number.isInteger(workerId)) {
+			throw new TypeError('Expected options.workerId to be an integer');
+		}
+		if (pingDelay < 0) {
+			throw new RangeError('Expected options.pingDelay to be non-negative');
+		}
+		if (pingDelay > 0x7fffffff) {
+			throw new RangeError('Expected options.pingDelay to be no greater than 2147483647');
+		}
+		if (workerId <= 0) {
+			throw new RangeError('Expected options.workerId to be positive');
+		}
+
 		super(filename, options);
+		this._pingTimer = null;
+		this._workerId = workerId;
+
+		if (this._fd >= 0) {
+			this._pingTimer = setInterval(this._ping.bind(this), pingDelay).unref();
+		}
+	}
+
+	WORKER_STARTED() {
+		if (this._fd < 0) return this;
+		super.log([Date.now(), EventTypes.WORKER_STARTED, this._workerId]).flush();
+		this._pingTimer.refresh();
+		return this;
+	}
+
+	WORKER_GOING_ONLINE() {
+		if (this._fd < 0) return this;
+		super.log([Date.now(), EventTypes.WORKER_GOING_ONLINE, this._workerId]).flush();
+		this._pingTimer.refresh();
+		return this;
 	}
 
 	WORKER_ONLINE() {
-		return super.log([constants.WORKER_ONLINE, Date.now(), constants.WORKER_ID]).flush();
+		if (this._fd < 0) return this;
+		super.log([Date.now(), EventTypes.WORKER_ONLINE, this._workerId]).flush();
+		this._pingTimer.refresh();
+		return this;
 	}
 
 	WORKER_GOING_OFFLINE() {
-		return super.log([constants.WORKER_GOING_OFFLINE, Date.now(), constants.WORKER_ID]).flush();
+		if (this._fd < 0) return this;
+		super.log([Date.now(), EventTypes.WORKER_GOING_OFFLINE, this._workerId]).flush();
+		this._pingTimer.refresh();
+		return this;
 	}
 
 	WORKER_OFFLINE() {
-		return super.log([constants.WORKER_OFFLINE, Date.now(), constants.WORKER_ID]).flush();
+		if (this._fd < 0) return this;
+		super.log([Date.now(), EventTypes.WORKER_OFFLINE, this._workerId]).flush();
+		this._pingTimer.refresh();
+		return this;
 	}
 
 	WORKER_DONE() {
-		return super.log([constants.WORKER_DONE, Date.now(), constants.WORKER_ID]).flush();
-	}
-
-	WORKER_LOG(data) {
-		if (this._fd < 0) return this; // Fast path for closed logs
-		return super.log([constants.WORKER_LOG, Date.now(), constants.WORKER_ID, data]);
+		if (this._fd < 0) return this;
+		super.log([Date.now(), EventTypes.WORKER_DONE, this._workerId]).flush();
+		this._pingTimer.refresh();
+		return this;
 	}
 
 	WORKER_UNCAUGHT_EXCEPTION(err) {
-		if (this._fd < 0) return this; // Fast path for closed logs
-		return super.log([constants.WORKER_UNCAUGHT_EXCEPTION, Date.now(), constants.WORKER_ID, getExceptionData(err)]);
+		if (this._fd < 0) return this;
+		super.log([Date.now(), EventTypes.WORKER_UNCAUGHT_EXCEPTION, this._workerId, getExceptionData(err)]);
+		this._pingTimer.refresh();
+		return this;
 	}
 
-	log(data) {
-		return this.WORKER_LOG(data);
+	WORKER_LOG_CRITICAL(data) {
+		if (this._fd < 0) return this;
+		super.log([Date.now(), EventTypes.WORKER_LOG_CRITICAL, this._workerId, data]);
+		this._pingTimer.refresh();
+		return this;
+	}
+
+	WORKER_LOG_ERROR(data) {
+		if (this._fd < 0) return this;
+		super.log([Date.now(), EventTypes.WORKER_LOG_ERROR, this._workerId, data]);
+		this._pingTimer.refresh();
+		return this;
+	}
+
+	WORKER_LOG_WARN(data) {
+		if (this._fd < 0) return this;
+		super.log([Date.now(), EventTypes.WORKER_LOG_WARN, this._workerId, data]);
+		this._pingTimer.refresh();
+		return this;
+	}
+
+	WORKER_LOG_INFO(data) {
+		if (this._fd < 0) return this;
+		super.log([Date.now(), EventTypes.WORKER_LOG_INFO, this._workerId, data]);
+		this._pingTimer.refresh();
+		return this;
+	}
+
+	log() {
+		throw new TypeError('Private method');
+	}
+
+	rotate(filename) {
+		if (this._fd < 0) return this;
+		super.rotate(filename);
+		this._ping().flush();
+		this._pingTimer.refresh();
+		return this;
+	}
+
+	close() {
+		super.close();
+		clearInterval(this._pingTimer);
+		return this;
 	}
 
 	newRequest() {
-		return new RequestLogger(this, super.log);
+		return new RequestLogger(this, this._logForRequest);
+	}
+
+	_logForRequest(data) {
+		super.log(data);
+		this._pingTimer.refresh();
+	}
+
+	_ping() {
+		return super.log([Date.now(), EventTypes.WORKER_PING, this._workerId]);
 	}
 };
