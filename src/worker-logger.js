@@ -2,10 +2,12 @@
 const cluster = require('cluster');
 const Logger = require('./logger');
 const RequestLogger = require('./request-logger');
+const ExceptionUtil = require('./exception-util');
+const LimitQueue = require('./limit-queue');
 const EventTypes = require('./event-types');
-const getExceptionData = require('./get-exception-data');
 
 const WORKER_ID = cluster.isWorker ? cluster.worker.id : null;
+const MAX_DEBUG_LOG_COUNT = 100;
 
 /*
 	A logger for recording changes within a server cluster's worker process.
@@ -32,6 +34,7 @@ module.exports = class WorkerLogger extends Logger {
 		super(filename, options);
 		this._pingTimer = null;
 		this._workerId = workerId;
+		this._debugLogs = new LimitQueue(MAX_DEBUG_LOG_COUNT);
 
 		if (this._fd >= 0) {
 			this._pingTimer = setInterval(this._ping.bind(this), pingDelay).unref();
@@ -82,7 +85,8 @@ module.exports = class WorkerLogger extends Logger {
 
 	WORKER_UNCAUGHT_EXCEPTION(err) {
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_UNCAUGHT_EXCEPTION, this._workerId, getExceptionData(err)]);
+		const exceptionData = ExceptionUtil.encode(err, this._debugLogs.drain());
+		super.log([Date.now(), EventTypes.WORKER_UNCAUGHT_EXCEPTION, this._workerId, exceptionData]);
 		this._pingTimer.refresh();
 		return this;
 	}
@@ -112,6 +116,12 @@ module.exports = class WorkerLogger extends Logger {
 		if (this._fd < 0) return this;
 		super.log([Date.now(), EventTypes.WORKER_LOG_INFO, this._workerId, data]);
 		this._pingTimer.refresh();
+		return this;
+	}
+
+	WORKER_LOG_DEBUG(data) {
+		if (this._fd < 0) return this;
+		this._debugLogs.push([Date.now(), data]);
 		return this;
 	}
 

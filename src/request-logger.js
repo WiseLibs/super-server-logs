@@ -3,7 +3,7 @@ const { v4: uuidV4, stringify: uuidStringify } = require('uuid');
 const { Address4, Address6 } = require('ip-address');
 const { REQUEST, REQUEST_META, RESPONSE, RESPONSE_FINISHED } = require('./event-types');
 const { REQUEST_LOG_CRITICAL, REQUEST_LOG_ERROR, REQUEST_LOG_WARN, REQUEST_LOG_INFO } = require('./event-types');
-const getExceptionData = require('./get-exception-data');
+const ExceptionUtil = require('./exception-util');
 const Logger = require('./logger');
 
 /*
@@ -29,6 +29,7 @@ module.exports = class RequestLogger {
 		this._logFn = logFn;
 		this._requestIdString = '';
 		this._requestIdBuffer = Buffer.allocUnsafe(16);
+		this._debugLogs = null;
 
 		uuidV4(undefined, this._requestIdBuffer);
 	}
@@ -60,8 +61,9 @@ module.exports = class RequestLogger {
 		}
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), RESPONSE, parent._workerId, this._requestIdBuffer,
-				statusCode, err == null ? null : getExceptionData(err)]);
+			const exceptionData = err == null ? null : ExceptionUtil.encode(err, this._debugLogs);
+			this._debugLogs = null;
+			this._logFn.call(parent, [Date.now(), RESPONSE, parent._workerId, this._requestIdBuffer, statusCode, exceptionData]);
 		}
 		return this;
 	}
@@ -69,8 +71,9 @@ module.exports = class RequestLogger {
 	RESPONSE_FINISHED(err) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), RESPONSE_FINISHED, parent._workerId, this._requestIdBuffer,
-				err == null ? null : getExceptionData(err)]);
+			const exceptionData = err == null ? null : ExceptionUtil.encode(err, this._debugLogs);
+			this._debugLogs = null;
+			this._logFn.call(parent, [Date.now(), RESPONSE_FINISHED, parent._workerId, this._requestIdBuffer, exceptionData]);
 		}
 		return this;
 	}
@@ -103,6 +106,15 @@ module.exports = class RequestLogger {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
 			this._logFn.call(parent, [Date.now(), REQUEST_LOG_INFO, parent._workerId, this._requestIdBuffer, data]);
+		}
+		return this;
+	}
+
+	REQUEST_LOG_DEBUG(data) {
+		const parent = this._parent;
+		if (parent._fd >= 0) {
+			if (!this._debugLogs) this._debugLogs = [];
+			this._debugLogs.push([Date.now(), data]);
 		}
 		return this;
 	}

@@ -1,7 +1,10 @@
 'use strict';
 const Logger = require('./logger');
+const ExceptionUtil = require('./exception-util');
+const LimitQueue = require('./limit-queue');
 const EventTypes = require('./event-types');
-const getExceptionData = require('./get-exception-data');
+
+const MAX_DEBUG_LOG_COUNT = 100;
 
 /*
 	A logger for recording changes within a server cluster's master process.
@@ -28,6 +31,7 @@ module.exports = class MasterLogger extends Logger {
 		super(filename, options);
 		this._pingTimer = null;
 		this._workerIds = new Set();
+		this._debugLogs = new LimitQueue(MAX_DEBUG_LOG_COUNT);
 
 		if (this._fd >= 0) {
 			this._pingTimer = setInterval(this._ping.bind(this), pingDelay).unref();
@@ -81,7 +85,8 @@ module.exports = class MasterLogger extends Logger {
 
 	MASTER_UNCAUGHT_EXCEPTION(err) {
 		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.MASTER_UNCAUGHT_EXCEPTION, getExceptionData(err)]);
+		const exceptionData = ExceptionUtil.encode(err, this._debugLogs.drain());
+		return super.log([Date.now(), EventTypes.MASTER_UNCAUGHT_EXCEPTION, exceptionData]);
 	}
 
 	MASTER_LOG_CRITICAL(data) {
@@ -102,6 +107,12 @@ module.exports = class MasterLogger extends Logger {
 	MASTER_LOG_INFO(data) {
 		if (this._fd < 0) return this;
 		return super.log([Date.now(), EventTypes.MASTER_LOG_INFO, data]);
+	}
+
+	MASTER_LOG_DEBUG(data) {
+		if (this._fd < 0) return this;
+		this._debugLogs.push([Date.now(), data]);
+		return this;
 	}
 
 	log() {
