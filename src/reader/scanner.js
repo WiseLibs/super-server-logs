@@ -23,11 +23,9 @@ module.exports = class Scanner {
 		if (totalSize < 0) {
 			throw new RangeError('Expected totalSize to be non-negative');
 		}
-		if (vfs.closed) {
-			throw new Error('Vfs object is closed');
-		}
 
 		this._vfs = vfs;
+		this._totalSize = totalSize;
 		this._pageCount = Math.ceil(totalSize / PAGE_SIZE);
 		this._chunk = new Uint8Array();
 		this._chunkOffset = 0;
@@ -118,7 +116,9 @@ module.exports = class Scanner {
 					this._tailLength = chunk.byteLength - offset;
 				}
 			} else {
-				this._chunkOffset = chunk.byteLength;
+				if (!this._isBlockBundary) {
+					this._chunkOffset = chunk.byteLength;
+				}
 				break;
 			}
 		}
@@ -189,6 +189,34 @@ module.exports = class Scanner {
 				break;
 			}
 		}
+	}
+
+	async updateSize(totalSize) {
+		if (!Number.isInteger(totalSize)) {
+			throw new TypeError('Expected totalSize to be an integer');
+		}
+		if (totalSize < this._totalSize) {
+			// TODO: if page count can't decrease, what happens during log rotation?
+			throw new RangeError('Vfs size cannot decrease');
+		}
+		if (totalSize === this._totalSize) {
+			return;
+		}
+
+		// If we're currently on the last page, reload the chunk.
+		const pageNumber = this._chunkFromPageNumber;
+		if (pageNumber === this._pageCount - 1 && pageNumber >= 0) {
+			let chunk = await this._vfs.read(pageNumber * PAGE_SIZE, PAGE_SIZE);
+
+			if (this._tailLength > 0) {
+				chunk = BufferUtil.concat([this._chunk.subarray(0, this._tailLength), chunk]);
+			}
+
+			this._chunk = chunk;
+		}
+
+		this._totalSize = totalSize;
+		this._pageCount = Math.ceil(totalSize / PAGE_SIZE);
 	}
 
 	*_yieldLogs() {

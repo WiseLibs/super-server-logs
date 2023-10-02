@@ -26,9 +26,6 @@ module.exports = async (vfs, totalSize, desiredTimestamp) => {
 	if (totalSize < 0) {
 		throw new RangeError('Expected totalSize to be non-negative');
 	}
-	if (vfs.closed) {
-		throw new Error('Vfs object is closed');
-	}
 
 	const pageCount = Math.ceil(totalSize / PAGE_SIZE);
 	let prevPageNumber = 0;

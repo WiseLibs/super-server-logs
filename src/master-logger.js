@@ -4,8 +4,6 @@ const ExceptionUtil = require('./exception-util');
 const LimitQueue = require('./limit-queue');
 const EventTypes = require('./event-types');
 
-const MAX_DEBUG_LOG_COUNT = 100;
-
 /*
 	A logger for recording changes within a server cluster's master process.
 
@@ -17,21 +15,27 @@ const MAX_DEBUG_LOG_COUNT = 100;
  */
 
 module.exports = class MasterLogger extends Logger {
-	constructor(filename, { pingDelay = 1000 * 60, ...options } = {}) {
+	constructor(filename, { pingDelay = 1000 * 60, debugLogLimit = 100, ...options } = {}) {
 		if (!Number.isInteger(pingDelay)) {
 			throw new TypeError('Expected options.pingDelay to be an integer');
 		}
-		if (pingDelay < 0) {
-			throw new RangeError('Expected options.pingDelay to be non-negative');
+		if (!Number.isInteger(debugLogLimit)) {
+			throw new TypeError('Expected options.debugLogLimit to be an integer');
+		}
+		if (pingDelay < 1) {
+			throw new RangeError('Expected options.pingDelay to be at least 1 ms');
 		}
 		if (pingDelay > 0x7fffffff) {
 			throw new RangeError('Expected options.pingDelay to be no greater than 2147483647');
+		}
+		if (debugLogLimit < 0) {
+			throw new RangeError('Expected options.debugLogLimit to be non-negative');
 		}
 
 		super(filename, options);
 		this._pingTimer = null;
 		this._workerIds = new Set();
-		this._debugLogs = new LimitQueue(MAX_DEBUG_LOG_COUNT);
+		this._debugLogs = new LimitQueue(debugLogLimit);
 
 		if (this._fd >= 0) {
 			this._pingTimer = setInterval(this._ping.bind(this), pingDelay).unref();
@@ -89,27 +93,27 @@ module.exports = class MasterLogger extends Logger {
 		return super.log([Date.now(), EventTypes.MASTER_UNCAUGHT_EXCEPTION, exceptionData]);
 	}
 
-	MASTER_LOG_CRITICAL(data) {
+	critical(data) {
 		if (this._fd < 0) return this;
 		return super.log([Date.now(), EventTypes.MASTER_LOG_CRITICAL, data]);
 	}
 
-	MASTER_LOG_ERROR(data) {
+	error(data) {
 		if (this._fd < 0) return this;
 		return super.log([Date.now(), EventTypes.MASTER_LOG_ERROR, data]);
 	}
 
-	MASTER_LOG_WARN(data) {
+	warn(data) {
 		if (this._fd < 0) return this;
 		return super.log([Date.now(), EventTypes.MASTER_LOG_WARN, data]);
 	}
 
-	MASTER_LOG_INFO(data) {
+	info(data) {
 		if (this._fd < 0) return this;
 		return super.log([Date.now(), EventTypes.MASTER_LOG_INFO, data]);
 	}
 
-	MASTER_LOG_DEBUG(data) {
+	debug(data) {
 		if (this._fd < 0) return this;
 		this._debugLogs.push([Date.now(), data]);
 		return this;

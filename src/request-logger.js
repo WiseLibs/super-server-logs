@@ -78,7 +78,7 @@ module.exports = class RequestLogger {
 		return this;
 	}
 
-	REQUEST_LOG_CRITICAL(data) {
+	critical(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
 			this._logFn.call(parent, [Date.now(), REQUEST_LOG_CRITICAL, parent._workerId, this._requestIdBuffer, data]);
@@ -86,7 +86,7 @@ module.exports = class RequestLogger {
 		return this;
 	}
 
-	REQUEST_LOG_ERROR(data) {
+	error(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
 			this._logFn.call(parent, [Date.now(), REQUEST_LOG_ERROR, parent._workerId, this._requestIdBuffer, data]);
@@ -94,7 +94,7 @@ module.exports = class RequestLogger {
 		return this;
 	}
 
-	REQUEST_LOG_WARN(data) {
+	warn(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
 			this._logFn.call(parent, [Date.now(), REQUEST_LOG_WARN, parent._workerId, this._requestIdBuffer, data]);
@@ -102,7 +102,7 @@ module.exports = class RequestLogger {
 		return this;
 	}
 
-	REQUEST_LOG_INFO(data) {
+	info(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
 			this._logFn.call(parent, [Date.now(), REQUEST_LOG_INFO, parent._workerId, this._requestIdBuffer, data]);
@@ -110,7 +110,7 @@ module.exports = class RequestLogger {
 		return this;
 	}
 
-	REQUEST_LOG_DEBUG(data) {
+	debug(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
 			if (!this._debugLogs) this._debugLogs = [];

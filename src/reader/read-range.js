@@ -28,146 +28,138 @@ module.exports = async function* readRange(vfs, minTimestamp, maxTimestamp) {
 	if (maxTimestamp < 0) {
 		throw new RangeError('Expected maxTimestamp to be non-negative');
 	}
-	if (!vfs.closed) {
-		throw new Error('Vfs object is already in use');
-	}
 	if (minTimestamp > maxTimestamp) {
 		return;
 	}
 
-	await vfs.setup();
-	try {
-		const totalSize = await vfs.size();
-		const scanner = new Scanner(vfs, totalSize);
-		await scanner.goto(await binarySearch(vfs, totalSize, maxTimestamp));
+	const totalSize = await vfs.size();
+	const scanner = new Scanner(vfs, totalSize);
+	await scanner.goto(await binarySearch(vfs, totalSize, maxTimestamp));
 
-		let allWorkers = null;
-		let pendingWorkers = null;
-		for await (const log of scanner.forwardScan()) {
-			const [timestamp, eventType] = log;
-			if (eventType === STARTING_UP) {
-				allWorkers = new Set([-1]);
+	let allWorkers = null;
+	let pendingWorkers = null;
+	for await (const log of scanner.forwardScan()) {
+		const [timestamp, eventType] = log;
+		if (eventType === STARTING_UP) {
+			allWorkers = new Set([-1]);
+			if (timestamp > maxTimestamp) {
+				break;
+			} else {
+				pendingWorkers = new Set(allWorkers);
+			}
+		} else if (!pendingWorkers) {
+			if (eventType === MASTER_PING) {
+				allWorkers = new Set([-1, ...log[2]]);
 				if (timestamp > maxTimestamp) {
-					break;
+					if (!log[2].length) {
+						break;
+					} else {
+						pendingWorkers = new Set(log[2]);
+					}
 				} else {
 					pendingWorkers = new Set(allWorkers);
 				}
-			} else if (!pendingWorkers) {
-				if (eventType === MASTER_PING) {
-					allWorkers = new Set([-1, ...log[2]]);
-					if (timestamp > maxTimestamp) {
-						if (!log[2].length) {
-							break;
-						} else {
-							pendingWorkers = new Set(log[2]);
-						}
-					} else {
-						pendingWorkers = new Set(allWorkers);
+			}
+		} else {
+			if (eventType < 40 /* worker/request/response events */) {
+				if (timestamp > maxTimestamp) {
+					pendingWorkers.delete(log[2]);
+					if (!pendingWorkers.size) {
+						break;
 					}
 				}
 			} else {
-				if (eventType < 40 /* worker/request/response events */) {
+				if (eventType === WORKER_SPAWNED) {
 					if (timestamp > maxTimestamp) {
-						pendingWorkers.delete(log[2]);
-						if (!pendingWorkers.size) {
-							break;
-						}
-					}
-				} else {
-					if (eventType === WORKER_SPAWNED) {
-						if (timestamp > maxTimestamp) {
-							pendingWorkers.delete(-1);
-							if (!pendingWorkers.size) {
-								break;
-							}
-						} else {
-							allWorkers.add(log[2]);
-							pendingWorkers.add(log[2]);
-						}
-					} else if (eventType === WORKER_EXITED) {
-						allWorkers.delete(log[2]);
-						pendingWorkers.delete(log[2]);
-						if (timestamp > maxTimestamp) {
-							pendingWorkers.delete(-1);
-						}
+						pendingWorkers.delete(-1);
 						if (!pendingWorkers.size) {
 							break;
 						}
 					} else {
-						if (timestamp > maxTimestamp) {
-							pendingWorkers.delete(-1);
-							if (!pendingWorkers.size) {
-								break;
-							}
+						allWorkers.add(log[2]);
+						pendingWorkers.add(log[2]);
+					}
+				} else if (eventType === WORKER_EXITED) {
+					allWorkers.delete(log[2]);
+					pendingWorkers.delete(log[2]);
+					if (timestamp > maxTimestamp) {
+						pendingWorkers.delete(-1);
+					}
+					if (!pendingWorkers.size) {
+						break;
+					}
+				} else {
+					if (timestamp > maxTimestamp) {
+						pendingWorkers.delete(-1);
+						if (!pendingWorkers.size) {
+							break;
 						}
 					}
 				}
 			}
 		}
+	}
 
-		pendingWorkers = new Set(allWorkers);
-		for await (const log of scanner.backwardScan()) {
-			const [timestamp, eventType] = log;
-			if (timestamp >= minTimestamp && timestamp <= maxTimestamp) {
-				yield log;
+	pendingWorkers = new Set(allWorkers);
+	for await (const log of scanner.backwardScan()) {
+		const [timestamp, eventType] = log;
+		if (timestamp >= minTimestamp && timestamp <= maxTimestamp) {
+			yield log;
+		}
+
+		if (eventType === STARTING_UP) {
+			if (timestamp < minTimestamp) {
+				break;
+			} else {
+				pendingWorkers = null;
 			}
-
-			if (eventType === STARTING_UP) {
+		} else if (!pendingWorkers) {
+			if (eventType === MASTER_PING) {
 				if (timestamp < minTimestamp) {
-					break;
-				} else {
-					pendingWorkers = null;
-				}
-			} else if (!pendingWorkers) {
-				if (eventType === MASTER_PING) {
-					if (timestamp < minTimestamp) {
-						if (!log[2].length) {
-							break;
-						} else {
-							pendingWorkers = new Set(log[2]);
-						}
+					if (!log[2].length) {
+						break;
 					} else {
-						pendingWorkers = new Set([-1, ...log[2]]);
+						pendingWorkers = new Set(log[2]);
+					}
+				} else {
+					pendingWorkers = new Set([-1, ...log[2]]);
+				}
+			}
+		} else {
+			if (eventType < 40 /* worker/request/response events */) {
+				if (timestamp < minTimestamp) {
+					pendingWorkers.delete(log[2]);
+					if (!pendingWorkers.size) {
+						break;
 					}
 				}
 			} else {
-				if (eventType < 40 /* worker/request/response events */) {
+				if (eventType === WORKER_SPAWNED) {
+					pendingWorkers.delete(log[2]);
 					if (timestamp < minTimestamp) {
-						pendingWorkers.delete(log[2]);
-						if (!pendingWorkers.size) {
-							break;
-						}
+						pendingWorkers.delete(-1);
 					}
-				} else {
-					if (eventType === WORKER_SPAWNED) {
-						pendingWorkers.delete(log[2]);
-						if (timestamp < minTimestamp) {
-							pendingWorkers.delete(-1);
-						}
+					if (!pendingWorkers.size) {
+						break;
+					}
+				} else if (eventType === WORKER_EXITED) {
+					if (timestamp < minTimestamp) {
+						pendingWorkers.delete(-1);
 						if (!pendingWorkers.size) {
 							break;
-						}
-					} else if (eventType === WORKER_EXITED) {
-						if (timestamp < minTimestamp) {
-							pendingWorkers.delete(-1);
-							if (!pendingWorkers.size) {
-								break;
-							}
-						} else {
-							pendingWorkers.add(log[2]);
 						}
 					} else {
-						if (timestamp < minTimestamp) {
-							pendingWorkers.delete(-1);
-							if (!pendingWorkers.size) {
-								break;
-							}
+						pendingWorkers.add(log[2]);
+					}
+				} else {
+					if (timestamp < minTimestamp) {
+						pendingWorkers.delete(-1);
+						if (!pendingWorkers.size) {
+							break;
 						}
 					}
 				}
 			}
 		}
-	} finally {
-		await vfs.teardown();
 	}
 };

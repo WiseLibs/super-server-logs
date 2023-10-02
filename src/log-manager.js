@@ -42,6 +42,9 @@ module.exports = class LogManager extends EventEmitter {
 		if (pollInterval < 1) {
 			throw new RangeError('Expected options.pollInterval to be at least 1 ms');
 		}
+		if (pollInterval > 0x7fffffff) {
+			throw new RangeError('Expected options.pollInterval to be no greater than 2147483647');
+		}
 		if (logSizeLimit < 1024 * 1024) {
 			throw new RangeError('Expected options.logSizeLimit to be at least 1048576 bytes');
 		}

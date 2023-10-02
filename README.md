@@ -6,8 +6,10 @@ This library allows you to read and write server logs. In additional to ad-hoc l
 * Supports time-based and size-based log rotation, with automatic file cleanup
 * Capable of flushing logs on process exit/crash (except on `SIGKILL` or power outage)
 * Configurable output latency and buffer size
-* Arbitrary JSON data can be included in the logs
+* Arbitrary structured data can be included in the logs (JSON + binary data)
 * Safe to use from multiple threads/processes concurrently
+* Supports log levels, where DEBUG logs are only logged when an error occurs
+* Built-in compression for smaller log files
 
 ## Installation
 

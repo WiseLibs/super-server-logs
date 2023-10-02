@@ -68,29 +68,44 @@ module.exports = class Vfs {
 		this._maxCacheSize = cacheSize;
 		this._cache = new Map();
 		this._saveToCache = createSaveToCache(this._cache, this._maxCacheSize);
+		this._busy = false;
 		this._closed = true;
 	}
 
 	async setup() {
+		if (this._busy) {
+			throw new Error('Vfs object is busy with another operation');
+		}
 		if (!this._closed) {
 			throw new Error('Vfs object is already open');
 		}
 
-		const setupFn = this._setup;
-		await setupFn(this._saveToCache);
-		this._closed = false;
+		this._busy = true;
+		try {
+			const setupFn = this._setup;
+			await setupFn(this._saveToCache);
+			this._closed = false;
+		} finally {
+			this._busy = false;
+		}
 	}
 
 	async teardown() {
+		if (this._busy) {
+			throw new Error('Vfs object is busy with another operation');
+		}
 		if (this._closed) {
-			throw new Error('Vfs object is closed');
+			throw new Error('Vfs object is already closed');
 		}
 
-		const teardownFn = this._teardown;
-		await teardownFn();
-		this._cache = new Map();
-		this._saveToCache = createSaveToCache(this._cache, this._maxCacheSize);
-		this._closed = true;
+		this._busy = true;
+		try {
+			const teardownFn = this._teardown;
+			await teardownFn();
+			this._closed = true;
+		} finally {
+			this._busy = false;
+		}
 	}
 
 	async read(byteOffset, byteLength) {
@@ -106,6 +121,9 @@ module.exports = class Vfs {
 		if (byteLength < 0) {
 			throw new RangeError('Expected byet length to be non-negative');
 		}
+		if (this._busy) {
+			throw new Error('Vfs object is busy with another operation');
+		}
 		if (this._closed) {
 			throw new Error('Vfs object is closed');
 		}
@@ -113,53 +131,70 @@ module.exports = class Vfs {
 			return new Uint8Array();
 		}
 
-		const pageNumber = Math.floor(byteOffset / PAGE_SIZE);
-		const pageCount = Math.ceil((byteOffset + byteLength) / PAGE_SIZE) - pageNumber;
-		const { frontPages, backPages } = readFromCache(this._cache, pageNumber, pageCount);
+		this._busy = true;
+		try {
+			const pageNumber = Math.floor(byteOffset / PAGE_SIZE);
+			const pageCount = Math.ceil((byteOffset + byteLength) / PAGE_SIZE) - pageNumber;
+			const { frontPages, backPages } = readFromCache(this._cache, pageNumber, pageCount);
 
-		let data;
-		if (frontPages.length === pageCount) {
-			data = BufferUtil.concat(frontPages);
-		} else {
-			const readFn = this._read;
-			const readOffset = (pageNumber + frontPages.length) * PAGE_SIZE;
-			const readLength = (pageCount - frontPages.length - backPages.length) * PAGE_SIZE;
-			data = await readFn(readOffset, readLength, this._saveToCache);
+			let data;
+			if (frontPages.length === pageCount) {
+				data = BufferUtil.concat(frontPages);
+			} else {
+				const readFn = this._read;
+				const readOffset = (pageNumber + frontPages.length) * PAGE_SIZE;
+				const readLength = (pageCount - frontPages.length - backPages.length) * PAGE_SIZE;
+				data = await readFn(readOffset, readLength, this._saveToCache);
 
-			if (!(data instanceof Uint8Array)) {
-				throw new TypeError('Expected read() function to return a Uint8Array');
+				if (!(data instanceof Uint8Array)) {
+					throw new TypeError('Expected read() function to return a Uint8Array');
+				}
+
+				if (data.byteLength > readLength) {
+					data = data.subarray(0, readLength);
+				} else if (data.byteLength < readLength && backPages.length) {
+					throw new Error('Vfs data corruption detected');
+				}
+
+				data = BufferUtil.concat([...frontPages, data, ...backPages]);
 			}
 
-			if (data.byteLength > readLength) {
-				data = data.subarray(0, readLength);
-			} else if (data.byteLength < readLength && backPages.length) {
-				throw new Error('Vfs data corruption detected');
-			}
-
-			data = BufferUtil.concat([...frontPages, data, ...backPages]);
+			const trimBegin = byteOffset - pageNumber * PAGE_SIZE;
+			const trimEnd = trimBegin + byteLength;
+			return data.subarray(trimBegin, trimEnd);
+		} finally {
+			this._busy = false;
 		}
-
-		const trimBegin = byteOffset - pageNumber * PAGE_SIZE;
-		const trimEnd = trimBegin + byteLength;
-		return data.subarray(trimBegin, trimEnd);
 	}
 
 	async size() {
+		if (this._busy) {
+			throw new Error('Vfs object is busy with another operation');
+		}
 		if (this._closed) {
 			throw new Error('Vfs object is closed');
 		}
 
-		const sizeFn = this._size;
-		const totalSize = await sizeFn(this._saveToCache);
+		this._busy = true;
+		try {
+			const sizeFn = this._size;
+			const totalSize = await sizeFn(this._saveToCache);
 
-		if (!Number.isInteger(totalSize)) {
-			throw new TypeError('Expected size() function to return an integer');
-		}
-		if (totalSize < 0) {
-			throw new RangeError('Expected size() function to return non-negative');
-		}
+			if (!Number.isInteger(totalSize)) {
+				throw new TypeError('Expected size() function to return an integer');
+			}
+			if (totalSize < 0) {
+				throw new RangeError('Expected size() function to return non-negative');
+			}
 
-		return totalSize;
+			return totalSize;
+		} finally {
+			this._busy = false;
+		}
+	}
+
+	get busy() {
+		return this._busy;
 	}
 
 	get closed() {
@@ -191,6 +226,7 @@ function createSaveToCache(cache, maxCacheSize) {
 		}
 
 		// Add each page to cache (overwriting pages if they already exist).
+		// If the last page is incomplete, it will not be added to cache.
 		let pageNumber = Math.ceil(byteOffset / PAGE_SIZE);
 		let offset = pageNumber * PAGE_SIZE - byteOffset + PAGE_SIZE;
 		while (offset < data.byteLength) {
