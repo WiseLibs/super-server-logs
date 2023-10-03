@@ -196,7 +196,6 @@ module.exports = class Scanner {
 			throw new TypeError('Expected totalSize to be an integer');
 		}
 		if (totalSize < this._totalSize) {
-			// TODO: if page count can't decrease, what happens during log rotation?
 			throw new RangeError('Vfs size cannot decrease');
 		}
 		if (totalSize === this._totalSize) {

@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "ip-address": "^9.0.5",
-    "tiny-msgpack": "^2.0.2",
+    "tiny-msgpack": "^2.0.4",
     "uuid": "^9.0.0"
   }
 }
