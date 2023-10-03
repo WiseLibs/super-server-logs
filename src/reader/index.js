@@ -1,5 +1,6 @@
 'use strict';
 const Vfs = require('./vfs');
+const EnvironmentUtil = require('./environment-util');
 const readRange = require('./read-range');
 const readTail = require('./read-tail');
 
@@ -35,6 +36,11 @@ module.exports = class LogReader {
 			return;
 		}
 
+		if (!this._vfs._decompress) {
+			const { decompress } = await EnvironmentUtil.use();
+			this._vfs._decompress = decompress;
+		}
+
 		await this._vfs.setup();
 		try {
 			for await (const log of readRange(this._vfs, minTimestamp, maxTimestamp)) {
@@ -63,6 +69,11 @@ module.exports = class LogReader {
 		}
 		if (!this._vfs.closed || this._vfs.busy) {
 			throw new Error('LogReader is already busy with another operation');
+		}
+
+		if (!this._vfs._decompress) {
+			const { decompress } = await EnvironmentUtil.use();
+			this._vfs._decompress = decompress;
 		}
 
 		await this._vfs.setup();

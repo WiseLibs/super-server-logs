@@ -10,6 +10,7 @@
   },
   "license": "MIT",
   "main": "src/index.js",
+  "browser": "src/browser.js",
   "types": "src/types.d.ts",
   "scripts": {
     "test": "mocha --exit --slow=100 --timeout=5000"
@@ -19,7 +20,9 @@
     "mocha": "^10.2.0"
   },
   "dependencies": {
+    "@schickling-tmp/lz4-wasm-web": "^0.9.2-4",
     "ip-address": "^9.0.5",
+    "lz4-napi": "^2.2.0",
     "tiny-msgpack": "^2.0.4",
     "uuid": "^9.0.0"
   }

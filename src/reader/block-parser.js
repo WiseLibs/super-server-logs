@@ -1,14 +1,16 @@
 'use strict';
-const { inflateSync } = require('zlib'); // TODO: not usable in browser
 const Msgpack = require('tiny-msgpack');
 const Paper = require('tiny-msgpack/lib/paper');
 const decode = require('tiny-msgpack/lib/decode');
 const BufferUtil = require('./buffer-util');
 const { ESCAPE, SEPARATOR, TRAILER_LENGTH, ESCAPED_SEQUENCE_LENGTH } = require('./constants');
 
-exports.parseOne = (block) => {
+exports.parseOne = (block, decompress) => {
 	if (!(block instanceof Uint8Array)) {
 		throw new TypeError('Expected block to be a Uint8Array');
+	}
+	if (typeof decompress !== 'function') {
+		throw new TypeError('Expected decompress to be a function');
 	}
 	if (!block.byteLength) {
 		throw new RangeError('Unexpected empty block');
@@ -18,14 +20,17 @@ exports.parseOne = (block) => {
 
 	block = block.subarray(0, block.byteLength - TRAILER_LENGTH);
 	block = unescapeBlock(block);
-	block = isCompressed ? inflateSync(block) : block;
+	block = isCompressed ? decompress(block) : block;
 
 	return Msgpack.decode(block);
 };
 
-exports.parseAll = (block) => {
+exports.parseAll = (block, decompress) => {
 	if (!(block instanceof Uint8Array)) {
 		throw new TypeError('Expected block to be a Uint8Array');
+	}
+	if (typeof decompress !== 'function') {
+		throw new TypeError('Expected decompress to be a function');
 	}
 	if (!block.byteLength) {
 		throw new RangeError('Unexpected empty block');
@@ -35,7 +40,7 @@ exports.parseAll = (block) => {
 
 	block = block.subarray(0, block.byteLength - TRAILER_LENGTH);
 	block = unescapeBlock(block);
-	block = isCompressed ? inflateSync(block) : block;
+	block = isCompressed ? decompress(block) : block;
 
 	const logs = [];
 	const decoder = new Paper();

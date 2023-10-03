@@ -17,11 +17,11 @@ module.exports = async (vfs, totalSize, desiredTimestamp) => {
 	if (!(vfs instanceof Vfs)) {
 		throw new TypeError('Expected vfs to be a Vfs object');
 	}
-	if (!Number.isInteger(desiredTimestamp)) {
-		throw new TypeError('Expected desiredTimestamp to be an integer');
-	}
 	if (!Number.isInteger(totalSize)) {
 		throw new TypeError('Expected totalSize to be an integer');
+	}
+	if (!Number.isInteger(desiredTimestamp)) {
+		throw new TypeError('Expected desiredTimestamp to be an integer');
 	}
 	if (totalSize < 0) {
 		throw new RangeError('Expected totalSize to be non-negative');
@@ -69,7 +69,7 @@ module.exports = async (vfs, totalSize, desiredTimestamp) => {
 async function getPageLog(vfs, pageNumber) {
 	const block = await readPageLastBlock(vfs, pageNumber);
 	if (block.byteLength) {
-		return BlockParser.parseOne(block);
+		return BlockParser.parseOne(block, vfs._decompress);
 	}
 }
 

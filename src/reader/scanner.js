@@ -95,7 +95,7 @@ module.exports = class Scanner {
 				this._chunkOffset = indexOfSeparator + TRAILER_LENGTH;
 				if (this._isBlockBundary) {
 					const block = chunk.subarray(offset, this._chunkOffset);
-					this._nextLogs = BlockParser.parseAll(block).reverse();
+					this._nextLogs = BlockParser.parseAll(block, this._vfs._decompress).reverse();
 					this._prevLogs = [];
 					this._isLoggingBackwards = false;
 					yield* this._yieldLogs();
@@ -154,7 +154,7 @@ module.exports = class Scanner {
 				this._chunkOffset = indexOfSeparator + TRAILER_LENGTH;
 				if (this._isBlockBundary) {
 					const block = chunk.subarray(this._chunkOffset, offset);
-					this._nextLogs = BlockParser.parseAll(block);
+					this._nextLogs = BlockParser.parseAll(block, this._vfs._decompress);
 					this._prevLogs = [];
 					this._isLoggingBackwards = true;
 					yield* this._yieldLogs();
@@ -179,7 +179,7 @@ module.exports = class Scanner {
 				this._chunkOffset = 0;
 				if (this._isBlockBundary && offset > 0) {
 					const block = chunk.subarray(0, offset);
-					this._nextLogs = BlockParser.parseAll(block);
+					this._nextLogs = BlockParser.parseAll(block, this._vfs._decompress);
 					this._prevLogs = [];
 					this._isLoggingBackwards = true;
 					yield* this._yieldLogs();

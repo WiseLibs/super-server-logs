@@ -1,6 +1,6 @@
 'use strict';
-const { deflateSync } = require('zlib');
 const { openSync, closeSync, writevSync } = require('fs');
+const { compressSync } = require('lz4-napi');
 const { encode } = require('tiny-msgpack');
 
 /*
@@ -131,7 +131,7 @@ function flush() {
 	let trailer = TRAILER_UNCOMPRESSED;
 
 	if (block.byteLength >= MINIMUM_COMPRESSIBLE_SIZE) {
-		block = deflateSync(block);
+		block = compressSync(block);
 		trailer = TRAILER_COMPRESSED;
 	}
 

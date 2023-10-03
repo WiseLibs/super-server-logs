@@ -68,6 +68,7 @@ module.exports = class Vfs {
 		this._maxCacheSize = cacheSize;
 		this._cache = new Map();
 		this._saveToCache = createSaveToCache(this._cache, this._maxCacheSize);
+		this._decompress = undefined; // Used internally by other modules
 		this._busy = false;
 		this._closed = true;
 	}
