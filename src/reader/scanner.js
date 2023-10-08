@@ -80,9 +80,10 @@ module.exports = class Scanner {
 			// next page to restore the correct state.
 			if (this._chunkOffset > this._chunk.byteLength) {
 				const overflow = this._chunkOffset - this._chunk.byteLength;
-				const pageNumber = this._chunkFromPageNumber + 1;
+				const pageDelta = Math.ceil(overflow / PAGE_SIZE);
+				const pageNumber = this._chunkFromPageNumber + pageDelta;
 				this._chunk = await this._vfs.read(pageNumber * PAGE_SIZE, PAGE_SIZE);
-				this._chunkOffset = overflow;
+				this._chunkOffset = overflow - ((pageDelta - 1) * PAGE_SIZE);
 				this._chunkFromPageNumber = pageNumber;
 			}
 		}
@@ -92,7 +93,7 @@ module.exports = class Scanner {
 			const chunk = this._chunk;
 			const offset = this._chunkOffset;
 
-			let indexOfSeparator = findNextSeparator(chunk, offset);
+			const indexOfSeparator = findNextSeparator(chunk, offset);
 			if (indexOfSeparator >= 0) {
 				this._chunkOffset = indexOfSeparator + TRAILER_LENGTH;
 				if (this._isBlockBundary) {
@@ -142,9 +143,10 @@ module.exports = class Scanner {
 			// If the current position was in the removed tail, backtrack to the
 			// previous page to restore the correct state.
 			if (this._chunkOffset < 0) {
-				const pageNumber = this._chunkFromPageNumber - 1;
+				const pageDelta = Math.floor(this._chunkOffset / PAGE_SIZE);
+				const pageNumber = this._chunkFromPageNumber + pageDelta;
 				this._chunk = await this._vfs.read(pageNumber * PAGE_SIZE, PAGE_SIZE);
-				this._chunkOffset += this._chunk.byteLength;
+				this._chunkOffset -= pageDelta * PAGE_SIZE;
 				this._chunkFromPageNumber = pageNumber;
 			}
 		}
@@ -155,7 +157,7 @@ module.exports = class Scanner {
 			const offset = this._chunkOffset;
 			const initialIndex = offset - 1 - (this._isBlockBundary ? TRAILER_LENGTH : 0);
 
-			let indexOfSeparator = findPrevSeparator(chunk, initialIndex);
+			const indexOfSeparator = findPrevSeparator(chunk, initialIndex);
 			if (indexOfSeparator >= 0) {
 				this._chunkOffset = indexOfSeparator + TRAILER_LENGTH;
 				if (this._isBlockBundary) {
@@ -263,7 +265,7 @@ module.exports = class Scanner {
 };
 
 function findNextSeparator(chunk, initialIndex) {
-	let indexOfSeparator = BufferUtil.indexOf(chunk, SEPARATOR, initialIndex);
+	const indexOfSeparator = BufferUtil.indexOf(chunk, SEPARATOR, initialIndex);
 
 	// A separator is only "found" if its entire trailer is also found (and not
 	// cut off at the end of the chunk).
@@ -275,7 +277,7 @@ function findNextSeparator(chunk, initialIndex) {
 }
 
 function findPrevSeparator(chunk, initialIndex) {
-	let indexOfSeparator = BufferUtil.lastIndexOf(chunk, SEPARATOR, initialIndex);
+	const indexOfSeparator = BufferUtil.lastIndexOf(chunk, SEPARATOR, initialIndex);
 
 	// A separator is only "found" if its entire trailer is also found (and not
 	// cut off at the end of the chunk).
