@@ -1,8 +1,8 @@
 'use strict';
-const Logger = require('./logger');
-const ExceptionUtil = require('./exception-util');
+const EventTypes = require('../shared/event-types');
+const ExceptionUtil = require('../shared/exception-util');
 const LimitQueue = require('./limit-queue');
-const EventTypes = require('./event-types');
+const Logger = require('./logger');
 
 /*
 	A logger for recording changes within a server cluster's master process.

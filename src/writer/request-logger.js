@@ -1,9 +1,9 @@
 'use strict';
 const { v4: uuidV4, stringify: uuidStringify } = require('uuid');
 const { Address4, Address6 } = require('ip-address');
-const { REQUEST, REQUEST_META, RESPONSE, RESPONSE_FINISHED } = require('./event-types');
-const { REQUEST_LOG_CRITICAL, REQUEST_LOG_ERROR, REQUEST_LOG_WARN, REQUEST_LOG_INFO } = require('./event-types');
-const ExceptionUtil = require('./exception-util');
+const { REQUEST, REQUEST_META, RESPONSE, RESPONSE_FINISHED } = require('../shared/event-types');
+const { REQUEST_LOG_CRITICAL, REQUEST_LOG_ERROR, REQUEST_LOG_WARN, REQUEST_LOG_INFO } = require('../shared/event-types');
+const ExceptionUtil = require('../shared/exception-util');
 const Logger = require('./logger');
 
 /*

@@ -1,5 +1,5 @@
 'use strict';
-const { STARTING_UP, WORKER_SPAWNED, WORKER_EXITED, MASTER_PING } = require('../event-types');
+const { STARTING_UP, WORKER_SPAWNED, WORKER_EXITED, MASTER_PING } = require('../shared/event-types');
 
 /*
 	Given a timestamp and a series of logs, BoundFinder detects when all future

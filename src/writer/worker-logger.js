@@ -1,10 +1,10 @@
 'use strict';
 const cluster = require('cluster');
-const Logger = require('./logger');
+const EventTypes = require('../shared/event-types');
+const ExceptionUtil = require('../shared/exception-util');
 const RequestLogger = require('./request-logger');
-const ExceptionUtil = require('./exception-util');
 const LimitQueue = require('./limit-queue');
-const EventTypes = require('./event-types');
+const Logger = require('./logger');
 
 const WORKER_ID = cluster.isWorker ? cluster.worker.id : null;
 

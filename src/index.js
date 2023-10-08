@@ -1,8 +1,8 @@
 'use strict';
-exports.LogManager = require('./log-manager');
-exports.MasterLogger = require('./master-logger');
-exports.WorkerLogger = require('./worker-logger');
-exports.RequestLogger = require('./request-logger');
+exports.LogManager = require('./writer/log-manager');
+exports.MasterLogger = require('./writer/master-logger');
+exports.WorkerLogger = require('./writer/worker-logger');
+exports.RequestLogger = require('./writer/request-logger');
 exports.LogReader = require('./reader');
 exports.Vfs = require('./reader/vfs');
 
