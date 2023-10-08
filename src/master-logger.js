@@ -36,6 +36,7 @@ module.exports = class MasterLogger extends Logger {
 		this._pingTimer = null;
 		this._workerIds = new Set();
 		this._debugLogs = new LimitQueue(debugLogLimit);
+		this._nextNonce = 0;
 
 		if (this._fd >= 0) {
 			this._pingTimer = setInterval(this._ping.bind(this), pingDelay).unref();
@@ -44,24 +45,24 @@ module.exports = class MasterLogger extends Logger {
 
 	STARTING_UP() {
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.STARTING_UP]).flush();
+		super.log([Date.now(), EventTypes.STARTING_UP, this._nonce()]).flush();
 		this._workerIds.clear();
 		return this;
 	}
 
 	STARTING_UP_COMPLETED() {
 		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.STARTING_UP_COMPLETED]).flush();
+		return super.log([Date.now(), EventTypes.STARTING_UP_COMPLETED, this._nonce()]).flush();
 	}
 
 	SHUTTING_DOWN() {
 		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.SHUTTING_DOWN]).flush();
+		return super.log([Date.now(), EventTypes.SHUTTING_DOWN, this._nonce()]).flush();
 	}
 
 	SHUTTING_DOWN_COMPLETED() {
 		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.SHUTTING_DOWN_COMPLETED]).flush();
+		return super.log([Date.now(), EventTypes.SHUTTING_DOWN_COMPLETED, this._nonce()]).flush();
 	}
 
 	WORKER_SPAWNED(workerId) {
@@ -69,7 +70,7 @@ module.exports = class MasterLogger extends Logger {
 			throw new TypeError('Expected workerId to be an integer');
 		}
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_SPAWNED, workerId]).flush();
+		super.log([Date.now(), EventTypes.WORKER_SPAWNED, this._nonce(), workerId]).flush();
 		this._workerIds.add(workerId);
 		return this;
 	}
@@ -82,7 +83,7 @@ module.exports = class MasterLogger extends Logger {
 			throw new TypeError('Expected reason to be an integer or string');
 		}
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_EXITED, workerId, reason]).flush();
+		super.log([Date.now(), EventTypes.WORKER_EXITED, this._nonce(), workerId, reason]).flush();
 		this._workerIds.delete(workerId);
 		return this;
 	}
@@ -90,27 +91,27 @@ module.exports = class MasterLogger extends Logger {
 	MASTER_UNCAUGHT_EXCEPTION(err) {
 		if (this._fd < 0) return this;
 		const exceptionData = ExceptionUtil.encode(err, this._debugLogs.drain());
-		return super.log([Date.now(), EventTypes.MASTER_UNCAUGHT_EXCEPTION, exceptionData]);
+		return super.log([Date.now(), EventTypes.MASTER_UNCAUGHT_EXCEPTION, this._nonce(), exceptionData]);
 	}
 
 	critical(data) {
 		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.MASTER_LOG_CRITICAL, data]);
+		return super.log([Date.now(), EventTypes.MASTER_LOG_CRITICAL, this._nonce(), data]);
 	}
 
 	error(data) {
 		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.MASTER_LOG_ERROR, data]);
+		return super.log([Date.now(), EventTypes.MASTER_LOG_ERROR, this._nonce(), data]);
 	}
 
 	warn(data) {
 		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.MASTER_LOG_WARN, data]);
+		return super.log([Date.now(), EventTypes.MASTER_LOG_WARN, this._nonce(), data]);
 	}
 
 	info(data) {
 		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.MASTER_LOG_INFO, data]);
+		return super.log([Date.now(), EventTypes.MASTER_LOG_INFO, this._nonce(), data]);
 	}
 
 	debug(data) {
@@ -136,6 +137,12 @@ module.exports = class MasterLogger extends Logger {
 	}
 
 	_ping() {
-		return super.log([Date.now(), EventTypes.MASTER_PING, [...this._workerIds]]);
+		return super.log([Date.now(), EventTypes.MASTER_PING, this._nonce(), [...this._workerIds]]);
+	}
+
+	_nonce() {
+		const nonce = this._nextNonce;
+		this._nextNonce = nonce + 1 & 0xffff;
+		return nonce;
 	}
 };

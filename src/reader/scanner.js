@@ -27,14 +27,19 @@ module.exports = class Scanner {
 		this._vfs = vfs;
 		this._totalSize = totalSize;
 		this._pageCount = Math.ceil(totalSize / PAGE_SIZE);
+
+		// Chunk state
 		this._chunk = new Uint8Array();
 		this._chunkOffset = 0;
 		this._chunkFromPageNumber = -1;
 		this._isBlockBundary = true;
 		this._tailLength = 0;
+
+		// Intra-block state
 		this._nextLogs = null;
 		this._prevLogs = null;
-		this._isLoggingBackwards = false;
+		this._nextOffset = 0;
+		this._prevOffset = 0;
 	}
 
 	async goto(byteOffset) {
@@ -58,13 +63,10 @@ module.exports = class Scanner {
 	}
 
 	async *forwardScan() {
-		// If we're in the middle of a chunk, finish logging it.
+		// If we're in the middle of a block, finish logging it.
 		if (this._nextLogs) {
-			if (this._isLoggingBackwards) {
-				const temp = this._nextLogs;
-				this._nextLogs = this._prevLogs;
-				this._prevLogs = temp;
-				this._isLoggingBackwards = false;
+			if (this._nextOffset < this._prevOffset) {
+				this._reverseBlock();
 			}
 			yield* this._yieldLogs();
 		}
@@ -95,9 +97,7 @@ module.exports = class Scanner {
 				this._chunkOffset = indexOfSeparator + TRAILER_LENGTH;
 				if (this._isBlockBundary) {
 					const block = chunk.subarray(offset, this._chunkOffset);
-					this._nextLogs = BlockParser.parseAll(block, this._vfs._decompress).reverse();
-					this._prevLogs = [];
-					this._isLoggingBackwards = false;
+					this._enterBlock(block, offset);
 					yield* this._yieldLogs();
 				} else {
 					this._isBlockBundary = true;
@@ -125,13 +125,10 @@ module.exports = class Scanner {
 	}
 
 	async *backwardScan() {
-		// If we're in the middle of a chunk, finish logging it.
+		// If we're in the middle of a block, finish logging it.
 		if (this._nextLogs) {
-			if (!this._isLoggingBackwards) {
-				const temp = this._nextLogs;
-				this._nextLogs = this._prevLogs;
-				this._prevLogs = temp;
-				this._isLoggingBackwards = true;
+			if (this._nextOffset > this._prevOffset) {
+				this._reverseBlock();
 			}
 			yield* this._yieldLogs();
 		}
@@ -141,6 +138,15 @@ module.exports = class Scanner {
 			this._chunk = this._chunk.subarray(this._tailLength);
 			this._chunkOffset -= this._tailLength;
 			this._tailLength = 0;
+
+			// If the current position was in the removed tail, backtrack to the
+			// previous page to restore the correct state.
+			if (this._chunkOffset < 0) {
+				const pageNumber = this._chunkFromPageNumber - 1;
+				this._chunk = await this._vfs.read(pageNumber * PAGE_SIZE, PAGE_SIZE);
+				this._chunkOffset += this._chunk.byteLength;
+				this._chunkFromPageNumber = pageNumber;
+			}
 		}
 
 		// Iterate through pages until there are none left.
@@ -154,9 +160,7 @@ module.exports = class Scanner {
 				this._chunkOffset = indexOfSeparator + TRAILER_LENGTH;
 				if (this._isBlockBundary) {
 					const block = chunk.subarray(this._chunkOffset, offset);
-					this._nextLogs = BlockParser.parseAll(block, this._vfs._decompress);
-					this._prevLogs = [];
-					this._isLoggingBackwards = true;
+					this._enterBlock(block, offset);
 					yield* this._yieldLogs();
 				} else {
 					this._isBlockBundary = true;
@@ -179,9 +183,7 @@ module.exports = class Scanner {
 				this._chunkOffset = 0;
 				if (this._isBlockBundary && offset > 0) {
 					const block = chunk.subarray(0, offset);
-					this._nextLogs = BlockParser.parseAll(block, this._vfs._decompress);
-					this._prevLogs = [];
-					this._isLoggingBackwards = true;
+					this._enterBlock(block, offset);
 					yield* this._yieldLogs();
 				} else {
 					this._isBlockBundary = true;
@@ -218,6 +220,31 @@ module.exports = class Scanner {
 		this._pageCount = Math.ceil(totalSize / PAGE_SIZE);
 	}
 
+	calculateByteOffset() {
+		if (this._chunkFromPageNumber < 0) {
+			return 0;
+		}
+
+		const offset = this._nextLogs ? this._nextOffset : this._chunkOffset;
+		return this._chunkFromPageNumber * PAGE_SIZE + offset - Math.max(0, this._tailLength);
+	}
+
+	_enterBlock(block, prevOffset) {
+		this._nextLogs = BlockParser.parseAll(block, this._vfs._decompress);
+		this._prevLogs = [];
+		this._nextOffset = this._chunkOffset;
+		this._prevOffset = prevOffset;
+	}
+
+	_reverseBlock() {
+		const temp1 = this._nextLogs;
+		this._nextLogs = this._prevLogs;
+		this._prevLogs = temp1;
+		const temp2 = this._nextOffset;
+		this._nextOffset = this._prevOffset;
+		this._prevOffset = temp2;
+	}
+
 	*_yieldLogs() {
 		for (;;) {
 			const log = this._nextLogs.pop();
@@ -227,6 +254,7 @@ module.exports = class Scanner {
 			} else {
 				this._nextLogs = null;
 				this._prevLogs = null;
+				this._chunkOffset = this._nextOffset;
 				yield log;
 				break;
 			}

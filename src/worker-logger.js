@@ -40,6 +40,7 @@ module.exports = class WorkerLogger extends Logger {
 		this._pingTimer = null;
 		this._workerId = workerId;
 		this._debugLogs = new LimitQueue(debugLogLimit);
+		this._nextNonce = 0;
 
 		if (this._fd >= 0) {
 			this._pingTimer = setInterval(this._ping.bind(this), pingDelay).unref();
@@ -48,42 +49,42 @@ module.exports = class WorkerLogger extends Logger {
 
 	WORKER_STARTED() {
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_STARTED, this._workerId]).flush();
+		super.log([Date.now(), EventTypes.WORKER_STARTED, this._workerId, this._nonce()]).flush();
 		this._pingTimer.refresh();
 		return this;
 	}
 
 	WORKER_GOING_ONLINE() {
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_GOING_ONLINE, this._workerId]).flush();
+		super.log([Date.now(), EventTypes.WORKER_GOING_ONLINE, this._workerId, this._nonce()]).flush();
 		this._pingTimer.refresh();
 		return this;
 	}
 
 	WORKER_ONLINE() {
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_ONLINE, this._workerId]).flush();
+		super.log([Date.now(), EventTypes.WORKER_ONLINE, this._workerId, this._nonce()]).flush();
 		this._pingTimer.refresh();
 		return this;
 	}
 
 	WORKER_GOING_OFFLINE() {
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_GOING_OFFLINE, this._workerId]).flush();
+		super.log([Date.now(), EventTypes.WORKER_GOING_OFFLINE, this._workerId, this._nonce()]).flush();
 		this._pingTimer.refresh();
 		return this;
 	}
 
 	WORKER_OFFLINE() {
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_OFFLINE, this._workerId]).flush();
+		super.log([Date.now(), EventTypes.WORKER_OFFLINE, this._workerId, this._nonce()]).flush();
 		this._pingTimer.refresh();
 		return this;
 	}
 
 	WORKER_DONE() {
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_DONE, this._workerId]).flush();
+		super.log([Date.now(), EventTypes.WORKER_DONE, this._workerId, this._nonce()]).flush();
 		this._pingTimer.refresh();
 		return this;
 	}
@@ -91,35 +92,35 @@ module.exports = class WorkerLogger extends Logger {
 	WORKER_UNCAUGHT_EXCEPTION(err) {
 		if (this._fd < 0) return this;
 		const exceptionData = ExceptionUtil.encode(err, this._debugLogs.drain());
-		super.log([Date.now(), EventTypes.WORKER_UNCAUGHT_EXCEPTION, this._workerId, exceptionData]);
+		super.log([Date.now(), EventTypes.WORKER_UNCAUGHT_EXCEPTION, this._workerId, this._nonce(), exceptionData]);
 		this._pingTimer.refresh();
 		return this;
 	}
 
 	critical(data) {
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_LOG_CRITICAL, this._workerId, data]);
+		super.log([Date.now(), EventTypes.WORKER_LOG_CRITICAL, this._workerId, this._nonce(), data]);
 		this._pingTimer.refresh();
 		return this;
 	}
 
 	error(data) {
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_LOG_ERROR, this._workerId, data]);
+		super.log([Date.now(), EventTypes.WORKER_LOG_ERROR, this._workerId, this._nonce(), data]);
 		this._pingTimer.refresh();
 		return this;
 	}
 
 	warn(data) {
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_LOG_WARN, this._workerId, data]);
+		super.log([Date.now(), EventTypes.WORKER_LOG_WARN, this._workerId, this._nonce(), data]);
 		this._pingTimer.refresh();
 		return this;
 	}
 
 	info(data) {
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_LOG_INFO, this._workerId, data]);
+		super.log([Date.now(), EventTypes.WORKER_LOG_INFO, this._workerId, this._nonce(), data]);
 		this._pingTimer.refresh();
 		return this;
 	}
@@ -158,6 +159,12 @@ module.exports = class WorkerLogger extends Logger {
 	}
 
 	_ping() {
-		return super.log([Date.now(), EventTypes.WORKER_PING, this._workerId]);
+		return super.log([Date.now(), EventTypes.WORKER_PING, this._workerId, this._nonce()]);
+	}
+
+	_nonce() {
+		const nonce = this._nextNonce;
+		this._nextNonce = nonce + 1 & 0xffff;
+		return nonce;
 	}
 };

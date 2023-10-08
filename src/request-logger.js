@@ -40,9 +40,9 @@ module.exports = class RequestLogger {
 		}
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST, parent._workerId, this._requestIdBuffer,
-				encodeIpAddress(req.socket.remoteAddress), req.httpVersionMajor, req.httpVersionMinor,
-				req.url, encodeHttpMethod(req.method)]);
+			this._logFn.call(parent, [Date.now(), REQUEST, parent._workerId, parent._nonce(),
+				this._requestIdBuffer, encodeIpAddress(req.socket.remoteAddress),
+				req.httpVersionMajor, req.httpVersionMinor, req.url, encodeHttpMethod(req.method)]);
 		}
 		return this;
 	}
@@ -50,7 +50,8 @@ module.exports = class RequestLogger {
 	REQUEST_META(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_META, parent._workerId, this._requestIdBuffer, data]);
+			this._logFn.call(parent, [Date.now(), REQUEST_META, parent._workerId, parent._nonce(),
+				this._requestIdBuffer, data]);
 		}
 		return this;
 	}
@@ -63,7 +64,8 @@ module.exports = class RequestLogger {
 		if (parent._fd >= 0) {
 			const exceptionData = err == null ? null : ExceptionUtil.encode(err, this._debugLogs);
 			this._debugLogs = null;
-			this._logFn.call(parent, [Date.now(), RESPONSE, parent._workerId, this._requestIdBuffer, statusCode, exceptionData]);
+			this._logFn.call(parent, [Date.now(), RESPONSE, parent._workerId, parent._nonce(),
+				this._requestIdBuffer, statusCode, exceptionData]);
 		}
 		return this;
 	}
@@ -73,7 +75,8 @@ module.exports = class RequestLogger {
 		if (parent._fd >= 0) {
 			const exceptionData = err == null ? null : ExceptionUtil.encode(err, this._debugLogs);
 			this._debugLogs = null;
-			this._logFn.call(parent, [Date.now(), RESPONSE_FINISHED, parent._workerId, this._requestIdBuffer, exceptionData]);
+			this._logFn.call(parent, [Date.now(), RESPONSE_FINISHED, parent._workerId, parent._nonce(),
+				this._requestIdBuffer, exceptionData]);
 		}
 		return this;
 	}
@@ -81,7 +84,8 @@ module.exports = class RequestLogger {
 	critical(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_LOG_CRITICAL, parent._workerId, this._requestIdBuffer, data]);
+			this._logFn.call(parent, [Date.now(), REQUEST_LOG_CRITICAL, parent._workerId, parent._nonce(),
+				this._requestIdBuffer, data]);
 		}
 		return this;
 	}
@@ -89,7 +93,8 @@ module.exports = class RequestLogger {
 	error(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_LOG_ERROR, parent._workerId, this._requestIdBuffer, data]);
+			this._logFn.call(parent, [Date.now(), REQUEST_LOG_ERROR, parent._workerId, parent._nonce(),
+				this._requestIdBuffer, data]);
 		}
 		return this;
 	}
@@ -97,7 +102,8 @@ module.exports = class RequestLogger {
 	warn(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_LOG_WARN, parent._workerId, this._requestIdBuffer, data]);
+			this._logFn.call(parent, [Date.now(), REQUEST_LOG_WARN, parent._workerId, parent._nonce(),
+				this._requestIdBuffer, data]);
 		}
 		return this;
 	}
@@ -105,7 +111,8 @@ module.exports = class RequestLogger {
 	info(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_LOG_INFO, parent._workerId, this._requestIdBuffer, data]);
+			this._logFn.call(parent, [Date.now(), REQUEST_LOG_INFO, parent._workerId, parent._nonce(),
+				this._requestIdBuffer, data]);
 		}
 		return this;
 	}
