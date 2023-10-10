@@ -32,6 +32,14 @@ const DEFAULT_CACHE_SIZE = 1024 * 1024 * 16;
 	The functions above can call saveToCache(byteOffset, data) to save data to
 	a limited in-memory cache, which will be used to optimize subsequent reads
 	to the same Vfs. The cache is automatically trimmed when it becomes too large.
+
+	All other modules within this package that use the Vfs make some assumptions
+	about the way the data within the Vfs is layed out:
+		1. The first valid block of logs (if any) starts at offset 0.
+		2. The data is a contiguous stream of valid blocks of logs.
+		3. Only the last block can be incomplete (i.e., having no trailer).
+		4. Data can be appended to the Vfs, but otherwise the Vfs is immutable.
+		5. The logs within the Vfs were generated correctly.
  */
 
 module.exports = class Vfs {

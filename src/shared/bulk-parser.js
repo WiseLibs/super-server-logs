@@ -5,6 +5,7 @@ const BlockParser = require('./block-parser');
 const { findNextSeparator, findPrevSeparator } = require('./common');
 const { TRAILER_LENGTH } = require('./constants');
 
+// Transforms a bulk stream into a stream of blocks.
 exports.read = async function* read(input) {
 	let outputBuffer = new Uint8Array();
 
@@ -35,6 +36,7 @@ exports.read = async function* read(input) {
 	}
 };
 
+// Transforms a reversed bulk stream into a stream of blocks.
 exports.readReversed = async function* readReversed(input) {
 	const inputBuffer = [];
 	let inputBufferSize = 0;
@@ -105,6 +107,7 @@ exports.readReversed = async function* readReversed(input) {
 	}
 };
 
+// Parses a block into an array of logs.
 exports.parse = (block) => {
 	return BlockParser.parseAll(block).map(toLogEntry);
 };
