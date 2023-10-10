@@ -1,6 +1,5 @@
 'use strict';
 const BufferUtil = require('./buffer-util');
-const EnvironmentUtil = require('./environment-util');
 const BlockParser = require('./block-parser');
 const { findNextSeparator, findPrevSeparator } = require('./common');
 const { TRAILER_LENGTH } = require('./constants');
@@ -105,24 +104,9 @@ exports.readReversed = async function* readReversed(input) {
 	}
 };
 
-// TODO: it would be nice if this didn't have to be an async function
-exports.parse = async function* (block) {
-	if (!(block instanceof Uint8Array)) {
-		throw new TypeError('Expected block to be a Uint8Array');
-	}
-
-	const { decompress } = await EnvironmentUtil.use();
-	yield* BlockParser.parseAll(block, decompress);
-};
-
-// TODO: it would be nice if this didn't have to be an async function
-exports.parseReversed = async function* (block) {
-	if (!(block instanceof Uint8Array)) {
-		throw new TypeError('Expected block to be a Uint8Array');
-	}
-
-	const { decompress } = await EnvironmentUtil.use();
-	yield* BlockParser.parseAll(block, decompress).reverse();
+exports.parse = (block) => {
+	// TODO: return an array of friendly log objects
+	return BlockParser.parseAll(block);
 };
 
 function readUint32(chunk) {

@@ -1,13 +1,14 @@
 'use strict';
-exports.LogManager = require('./writer/log-manager');
-exports.MasterLogger = require('./writer/master-logger');
-exports.WorkerLogger = require('./writer/worker-logger');
-exports.RequestLogger = require('./writer/request-logger');
-exports.LogReader = require('./reader/log-reader');
-exports.BulkParser = require('./reader/bulk-parser');
-exports.Vfs = require('./reader/vfs');
-exports.LogDirectorySource = require('./log-directory-source');
+Object.assign(require('./shared/common'), {
+	compress: require('zlib').deflateSync,
+	decompress: require('zlib').inflateSync,
+});
 
-require('./reader/environment-util').define(async () => ({
-	decompress: require('lz4-napi').uncompressSync,
-}));
+exports.LogReader = require('./shared/log-reader');
+exports.BulkParser = require('./shared/bulk-parser');
+exports.Vfs = require('./shared/vfs');
+exports.LogDirectorySource = require('./nodejs/log-directory-source');
+exports.LogManager = require('./nodejs/log-manager');
+exports.MasterLogger = require('./nodejs/master-logger');
+exports.WorkerLogger = require('./nodejs/worker-logger');
+exports.RequestLogger = require('./nodejs/request-logger');

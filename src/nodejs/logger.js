@@ -1,7 +1,7 @@
 'use strict';
 const { openSync, closeSync, writevSync } = require('fs');
-const { compressSync } = require('lz4-napi');
 const { encode } = require('tiny-msgpack');
+const { compress } = require('../shared/common');
 
 /*
 	A generic logger that writes MessagePack blobs to a file. It buffers its
@@ -131,7 +131,7 @@ function flush() {
 	let trailer = TRAILER_UNCOMPRESSED;
 
 	if (block.byteLength >= MINIMUM_COMPRESSIBLE_SIZE) {
-		block = compressSync(block);
+		block = compress(block);
 		trailer = TRAILER_COMPRESSED;
 	}
 

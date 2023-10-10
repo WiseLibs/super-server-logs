@@ -1,6 +1,5 @@
 'use strict';
 const Vfs = require('./vfs');
-const EnvironmentUtil = require('./environment-util');
 const Scanner = require('./scanner');
 const BoundFinder = require('./bound-finder');
 const binarySearch = require('./binary-search');
@@ -39,7 +38,6 @@ module.exports = class LogReader {
 			return;
 		}
 
-		await initVfs(this._vfs);
 		await this._vfs.setup();
 		try {
 			const totalSize = await this._vfs.size();
@@ -88,7 +86,6 @@ module.exports = class LogReader {
 			return;
 		}
 
-		await initVfs(this._vfs);
 		await this._vfs.setup();
 		try {
 			const totalSize = await this._vfs.size();
@@ -137,7 +134,6 @@ module.exports = class LogReader {
 			throw new Error('LogReader is already busy with another operation');
 		}
 
-		await initVfs(this._vfs);
 		await this._vfs.setup();
 		try {
 			let totalSize = await this._vfs.size();
@@ -196,7 +192,6 @@ module.exports = class LogReader {
 			return;
 		}
 
-		await initVfs(this._vfs);
 		await this._vfs.setup();
 		try {
 			const totalSize = await this._vfs.size();
@@ -251,7 +246,6 @@ module.exports = class LogReader {
 			return;
 		}
 
-		await initVfs(this._vfs);
 		await this._vfs.setup();
 		try {
 			const totalSize = await this._vfs.size();
@@ -306,7 +300,6 @@ module.exports = class LogReader {
 			throw new Error('LogReader is already busy with another operation');
 		}
 
-		await initVfs(this._vfs);
 		await this._vfs.setup();
 		try {
 			let totalSize = await this._vfs.size();
@@ -345,13 +338,6 @@ module.exports = class LogReader {
 		}
 	}
 };
-
-async function initVfs(vfs) {
-	if (!vfs._decompress) {
-		const { decompress } = await EnvironmentUtil.use();
-		vfs._decompress = decompress;
-	}
-}
 
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));

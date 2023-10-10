@@ -25,3 +25,11 @@ exports.findPrevSeparator = (chunk, initialIndex) => {
 
 	return -1;
 };
+
+exports.compress = () => {
+	throw new TypeError('Bootstrapping required by index.js or browser.js');
+};
+
+exports.decompress = () => {
+	throw new TypeError('Bootstrapping required by index.js or browser.js');
+};

@@ -69,7 +69,7 @@ module.exports = async (vfs, totalSize, desiredTimestamp) => {
 async function getPageLog(vfs, pageNumber) {
 	const block = await readPageLastBlock(vfs, pageNumber);
 	if (block.byteLength) {
-		return BlockParser.parseOne(block, vfs._decompress);
+		return BlockParser.parseOne(block);
 	}
 }
 

@@ -1,8 +1,9 @@
 'use strict';
-exports.LogReader = require('./reader/log-reader');
-exports.BulkParser = require('./reader/bulk-parser');
-exports.Vfs = require('./reader/vfs');
+Object.assign(require('./shared/common'), {
+	compress: require('pako').deflate,
+	decompress: require('pako').inflate,
+});
 
-require('./reader/environment-util').define(async () => ({
-	decompress: (await import('@schickling-tmp/lz4-wasm-web')).decompress,
-}));
+exports.LogReader = require('./shared/log-reader');
+exports.BulkParser = require('./shared/bulk-parser');
+exports.Vfs = require('./shared/vfs');

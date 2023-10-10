@@ -3,14 +3,12 @@ const Msgpack = require('tiny-msgpack');
 const Paper = require('tiny-msgpack/lib/paper');
 const decode = require('tiny-msgpack/lib/decode');
 const BufferUtil = require('./buffer-util');
+const { decompress } = require('./common');
 const { ESCAPE, SEPARATOR, TRAILER_LENGTH, ESCAPED_SEQUENCE_LENGTH } = require('./constants');
 
-exports.parseOne = (block, decompress) => {
+exports.parseOne = (block) => {
 	if (!(block instanceof Uint8Array)) {
 		throw new TypeError('Expected block to be a Uint8Array');
-	}
-	if (typeof decompress !== 'function') {
-		throw new TypeError('Expected decompress to be a function');
 	}
 	if (!block.byteLength) {
 		throw new RangeError('Unexpected empty block');
@@ -25,12 +23,9 @@ exports.parseOne = (block, decompress) => {
 	return Msgpack.decode(block);
 };
 
-exports.parseAll = (block, decompress) => {
+exports.parseAll = (block) => {
 	if (!(block instanceof Uint8Array)) {
 		throw new TypeError('Expected block to be a Uint8Array');
-	}
-	if (typeof decompress !== 'function') {
-		throw new TypeError('Expected decompress to be a function');
 	}
 	if (!block.byteLength) {
 		throw new RangeError('Unexpected empty block');
