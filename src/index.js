@@ -4,6 +4,7 @@ Object.assign(require('./shared/common'), {
 	decompress: require('zlib').inflateSync,
 });
 
+exports.LogEntry = require('./shared/log-entry');
 exports.LogReader = require('./shared/log-reader');
 exports.BulkParser = require('./shared/bulk-parser');
 exports.Vfs = require('./shared/vfs');
@@ -12,3 +13,4 @@ exports.LogManager = require('./nodejs/log-manager');
 exports.MasterLogger = require('./nodejs/master-logger');
 exports.WorkerLogger = require('./nodejs/worker-logger');
 exports.RequestLogger = require('./nodejs/request-logger');
+Object.assign(exports, require('./shared/public-enums'));

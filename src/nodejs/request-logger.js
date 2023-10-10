@@ -3,6 +3,7 @@ const { v4: uuidV4, stringify: uuidStringify } = require('uuid');
 const { Address4, Address6 } = require('ip-address');
 const { REQUEST, REQUEST_META, RESPONSE, RESPONSE_FINISHED } = require('../shared/event-types');
 const { REQUEST_LOG_CRITICAL, REQUEST_LOG_ERROR, REQUEST_LOG_WARN, REQUEST_LOG_INFO } = require('../shared/event-types');
+const { HttpMethod } = require('../shared/public-enums');
 const ExceptionUtil = require('../shared/exception-util');
 const Logger = require('./logger');
 
@@ -40,7 +41,7 @@ module.exports = class RequestLogger {
 		}
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST, parent._workerId, parent._nonce(),
+			this._logFn.call(parent, [Date.now(), REQUEST, parent._nonce(), parent._workerId,
 				this._requestIdBuffer, encodeIpAddress(req.socket.remoteAddress),
 				req.httpVersionMajor, req.httpVersionMinor, req.url, encodeHttpMethod(req.method)]);
 		}
@@ -50,7 +51,7 @@ module.exports = class RequestLogger {
 	REQUEST_META(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_META, parent._workerId, parent._nonce(),
+			this._logFn.call(parent, [Date.now(), REQUEST_META, parent._nonce(), parent._workerId,
 				this._requestIdBuffer, data]);
 		}
 		return this;
@@ -64,8 +65,8 @@ module.exports = class RequestLogger {
 		if (parent._fd >= 0) {
 			const exceptionData = err == null ? null : ExceptionUtil.encode(err, this._debugLogs);
 			this._debugLogs = null;
-			this._logFn.call(parent, [Date.now(), RESPONSE, parent._workerId, parent._nonce(),
-				this._requestIdBuffer, statusCode, exceptionData]);
+			this._logFn.call(parent, [Date.now(), RESPONSE, parent._nonce(), parent._workerId,
+				this._requestIdBuffer, exceptionData, statusCode]);
 		}
 		return this;
 	}
@@ -75,7 +76,7 @@ module.exports = class RequestLogger {
 		if (parent._fd >= 0) {
 			const exceptionData = err == null ? null : ExceptionUtil.encode(err, this._debugLogs);
 			this._debugLogs = null;
-			this._logFn.call(parent, [Date.now(), RESPONSE_FINISHED, parent._workerId, parent._nonce(),
+			this._logFn.call(parent, [Date.now(), RESPONSE_FINISHED, parent._nonce(), parent._workerId,
 				this._requestIdBuffer, exceptionData]);
 		}
 		return this;
@@ -84,7 +85,7 @@ module.exports = class RequestLogger {
 	critical(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_LOG_CRITICAL, parent._workerId, parent._nonce(),
+			this._logFn.call(parent, [Date.now(), REQUEST_LOG_CRITICAL, parent._nonce(), parent._workerId,
 				this._requestIdBuffer, data]);
 		}
 		return this;
@@ -93,7 +94,7 @@ module.exports = class RequestLogger {
 	error(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_LOG_ERROR, parent._workerId, parent._nonce(),
+			this._logFn.call(parent, [Date.now(), REQUEST_LOG_ERROR, parent._nonce(), parent._workerId,
 				this._requestIdBuffer, data]);
 		}
 		return this;
@@ -102,7 +103,7 @@ module.exports = class RequestLogger {
 	warn(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_LOG_WARN, parent._workerId, parent._nonce(),
+			this._logFn.call(parent, [Date.now(), REQUEST_LOG_WARN, parent._nonce(), parent._workerId,
 				this._requestIdBuffer, data]);
 		}
 		return this;
@@ -111,7 +112,7 @@ module.exports = class RequestLogger {
 	info(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_LOG_INFO, parent._workerId, parent._nonce(),
+			this._logFn.call(parent, [Date.now(), REQUEST_LOG_INFO, parent._nonce(), parent._workerId,
 				this._requestIdBuffer, data]);
 		}
 		return this;
@@ -150,37 +151,16 @@ function encodeIpAddress(ipAddressString) {
 		return Buffer.from(bytes.slice(offset));
 	} else {
 		const bytes = new Address4(ipAddressString).toArray();
-		return bytes[0] << 24
-			| bytes[1] << 16
-			| bytes[2] << 8
-			| bytes[3];
+		return (bytes[0] * 0x1000000) +
+			(bytes[1] << 16 |
+			bytes[2] << 8 |
+			bytes[3]);
 	}
 }
 
-// Returns an integer corresponding to the given HTTP method given. If an
-// unrecognized HTTP method was given, it is returned as-is.
-// TODO: define these magic numbers in a way so they can be used for decoding too
+// Returns an integer corresponding to the given HTTP method. If an unrecognized
+// HTTP method was given, it is returned as-is (as a string).
 function encodeHttpMethod(method) {
-	switch (method) {
-		case 'GET':
-			return 0;
-		case 'HEAD':
-			return 1;
-		case 'POST':
-			return 2;
-		case 'PUT':
-			return 3;
-		case 'PATCH':
-			return 4;
-		case 'DELETE':
-			return 5;
-		case 'OPTIONS':
-			return 6;
-		case 'TRACE':
-			return 7;
-		case 'CONNECT':
-			return 8;
-		default:
-			return method;
-	}
+	const enumValue = HttpMethod[method];
+	return enumValue === undefined ? method : enumValue;
 }

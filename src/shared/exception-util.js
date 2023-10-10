@@ -32,7 +32,6 @@ exports.encode = (err, debugLogs) => {
 exports.decode = ([type, value, properties, debugLogs]) => {
 	const debug = [];
 	for (const [timestamp, data] of debugLogs) {
-		// TODO: should these objects look like full logs (with log level, workerId, requestId, etc.?)
 		debug.push({ timestamp, data });
 	}
 

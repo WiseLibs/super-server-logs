@@ -47,7 +47,7 @@ module.exports = class BoundFinder {
 		const [timestamp, eventType] = log;
 		if (eventType < 40 /* worker/request/response events */) {
 			if (pendingWorkers && timestamp > this._timestampBound) {
-				pendingWorkers.delete(log[2]);
+				pendingWorkers.delete(log[3]);
 				if (!pendingWorkers.size) {
 					return true;
 				}
@@ -111,7 +111,7 @@ module.exports = class BoundFinder {
 		const [timestamp, eventType] = log;
 		if (eventType < 40 /* worker/request/response events */) {
 			if (pendingWorkers && timestamp < this._timestampBound) {
-				pendingWorkers.delete(log[2]);
+				pendingWorkers.delete(log[3]);
 				if (!pendingWorkers.size) {
 					return true;
 				}

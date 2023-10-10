@@ -75,20 +75,23 @@ module.exports = class MasterLogger extends Logger {
 		return this;
 	}
 
-	WORKER_EXITED(workerId, reason) {
+	WORKER_EXITED(workerId, exitCode, signal = null) {
 		if (!Number.isInteger(workerId)) {
 			throw new TypeError('Expected workerId to be an integer');
 		}
-		if (!Number.isInteger(reason) && typeof reason !== 'string') {
-			throw new TypeError('Expected reason to be an integer or string');
+		if (!Number.isInteger(exitCode)) {
+			throw new TypeError('Expected exitCode to be an integer');
+		}
+		if (signal !== null && typeof signal !== 'string') {
+			throw new TypeError('Expected signal to be a string or null');
 		}
 		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_EXITED, this._nonce(), workerId, reason]).flush();
+		super.log([Date.now(), EventTypes.WORKER_EXITED, this._nonce(), workerId, exitCode, signal]).flush();
 		this._workerIds.delete(workerId);
 		return this;
 	}
 
-	MASTER_UNCAUGHT_EXCEPTION(err) {
+	UNCAUGHT_EXCEPTION(err) {
 		if (this._fd < 0) return this;
 		const exceptionData = ExceptionUtil.encode(err, this._debugLogs.drain());
 		return super.log([Date.now(), EventTypes.MASTER_UNCAUGHT_EXCEPTION, this._nonce(), exceptionData]);

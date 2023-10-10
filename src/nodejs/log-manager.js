@@ -24,7 +24,7 @@ module.exports = class LogManager extends EventEmitter {
 		logSizeLimit = 1024 * 1024 * 1024 * 2,
 		logAgeLimit = 1000 * 60 * 60 * 24 * 365,
 		granularity = 20,
-	}) {
+	} = {}) {
 		if (typeof dirname !== 'string' && dirname !== null) {
 			throw new TypeError('Expected dirname to be a string or null');
 		}

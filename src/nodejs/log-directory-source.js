@@ -233,7 +233,7 @@ async function isRotating(file) {
 				}
 			} else {
 				if (eventType < 40 /* worker/request/response events */) {
-					pendingWorkers.delete(log[2]);
+					pendingWorkers.delete(log[3]);
 					if (!pendingWorkers.size) {
 						return false;
 					}
