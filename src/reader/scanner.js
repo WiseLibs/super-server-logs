@@ -2,7 +2,8 @@
 const Vfs = require('./vfs');
 const BufferUtil = require('./buffer-util');
 const BlockParser = require('./block-parser');
-const { SEPARATOR, TRAILER_LENGTH } = require('./constants');
+const { findNextSeparator, findPrevSeparator } = require('./common');
+const { TRAILER_LENGTH } = require('./constants');
 
 const PAGE_SIZE = Vfs.PAGE_SIZE * 8;
 
@@ -263,27 +264,3 @@ module.exports = class Scanner {
 		}
 	}
 };
-
-function findNextSeparator(chunk, initialIndex) {
-	const indexOfSeparator = BufferUtil.indexOf(chunk, SEPARATOR, initialIndex);
-
-	// A separator is only "found" if its entire trailer is also found (and not
-	// cut off at the end of the chunk).
-	if (indexOfSeparator >= 0 && indexOfSeparator + TRAILER_LENGTH <= chunk.byteLength) {
-		return indexOfSeparator;
-	}
-
-	return -1;
-}
-
-function findPrevSeparator(chunk, initialIndex) {
-	const indexOfSeparator = BufferUtil.lastIndexOf(chunk, SEPARATOR, initialIndex);
-
-	// A separator is only "found" if its entire trailer is also found (and not
-	// cut off at the end of the chunk).
-	if (indexOfSeparator >= 0 && indexOfSeparator + TRAILER_LENGTH <= chunk.byteLength) {
-		return indexOfSeparator;
-	}
-
-	return -1;
-}

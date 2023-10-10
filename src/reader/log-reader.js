@@ -44,6 +44,55 @@ module.exports = class LogReader {
 		try {
 			const totalSize = await this._vfs.size();
 			const scanner = new Scanner(this._vfs, totalSize);
+			await scanner.goto(await binarySearch(this._vfs, totalSize, minTimestamp));
+
+			const lowerBound = new BoundFinder(minTimestamp);
+			for await (const log of scanner.backwardScan()) {
+				if (lowerBound.reachedLowerBound(log)) {
+					break;
+				}
+			}
+
+			const upperBound = new BoundFinder(maxTimestamp, lowerBound.state);
+			for await (const log of scanner.forwardScan()) {
+				const [timestamp] = log;
+				if (timestamp >= minTimestamp && timestamp <= maxTimestamp) {
+					yield log; // TODO: yield a friendly log object
+				}
+				if (upperBound.reachedUpperBound(log)) {
+					break;
+				}
+			}
+		} finally {
+			await this._vfs.teardown();
+		}
+	}
+
+	async *rangeReversed(minTimestamp, maxTimestamp) {
+		if (!Number.isInteger(minTimestamp)) {
+			throw new TypeError('Expected minTimestamp to be an integer');
+		}
+		if (!Number.isInteger(maxTimestamp)) {
+			throw new TypeError('Expected maxTimestamp to be an integer');
+		}
+		if (minTimestamp < 0) {
+			throw new RangeError('Expected minTimestamp to be non-negative');
+		}
+		if (maxTimestamp < 0) {
+			throw new RangeError('Expected maxTimestamp to be non-negative');
+		}
+		if (!this._vfs.closed || this._vfs.busy) {
+			throw new Error('LogReader is already busy with another operation');
+		}
+		if (minTimestamp > maxTimestamp) {
+			return;
+		}
+
+		await initVfs(this._vfs);
+		await this._vfs.setup();
+		try {
+			const totalSize = await this._vfs.size();
+			const scanner = new Scanner(this._vfs, totalSize);
 			await scanner.goto(await binarySearch(this._vfs, totalSize, maxTimestamp));
 
 			const upperBound = new BoundFinder(maxTimestamp);
@@ -128,6 +177,61 @@ module.exports = class LogReader {
 	}
 
 	async *bulkRange(minTimestamp, maxTimestamp) {
+		if (!Number.isInteger(minTimestamp)) {
+			throw new TypeError('Expected minTimestamp to be an integer');
+		}
+		if (!Number.isInteger(maxTimestamp)) {
+			throw new TypeError('Expected maxTimestamp to be an integer');
+		}
+		if (minTimestamp < 0) {
+			throw new RangeError('Expected minTimestamp to be non-negative');
+		}
+		if (maxTimestamp < 0) {
+			throw new RangeError('Expected maxTimestamp to be non-negative');
+		}
+		if (!this._vfs.closed || this._vfs.busy) {
+			throw new Error('LogReader is already busy with another operation');
+		}
+		if (minTimestamp > maxTimestamp) {
+			return;
+		}
+
+		await initVfs(this._vfs);
+		await this._vfs.setup();
+		try {
+			const totalSize = await this._vfs.size();
+			const scanner = new Scanner(this._vfs, totalSize);
+			await scanner.goto(await binarySearch(this._vfs, totalSize, maxTimestamp));
+
+			const upperBound = new BoundFinder(maxTimestamp);
+			for await (const log of scanner.forwardScan()) {
+				if (upperBound.reachedUpperBound(log)) {
+					break;
+				}
+			}
+
+			const upperByteOffset = scanner.calculateByteOffset();
+			await scanner.goto(await binarySearch(this._vfs, totalSize, minTimestamp));
+
+			const lowerBound = new BoundFinder(minTimestamp);
+			for await (const log of scanner.backwardScan()) {
+				if (lowerBound.reachedLowerBound(log)) {
+					break;
+				}
+			}
+
+			let lowerByteOffset = scanner.calculateByteOffset();
+			while (upperByteOffset > lowerByteOffset) {
+				const byteLength = Math.min(PAGE_SIZE, upperByteOffset - lowerByteOffset);
+				yield await this._vfs.read(lowerByteOffset, byteLength);
+				lowerByteOffset += byteLength;
+			}
+		} finally {
+			await this._vfs.teardown();
+		}
+	}
+
+	async *bulkRangeReversed(minTimestamp, maxTimestamp) {
 		if (!Number.isInteger(minTimestamp)) {
 			throw new TypeError('Expected minTimestamp to be an integer');
 		}

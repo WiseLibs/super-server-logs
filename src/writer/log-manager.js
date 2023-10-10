@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const EventEmitter = require('events');
+const { isLogBasename, toLogBasename, toLogTimestamp } = require('./common');
 
 /*
 	LogManager is used by a server cluster's master process to manage the logs
@@ -149,7 +150,7 @@ function startPolling(dirname, pollInterval, logSizeLimit, logAgeLimit, granular
 			if (shouldDelete.length) {
 				shouldDelete.push(filename); // Already exceeded a limit
 			} else {
-				const timestamp = Number(basename.slice(0, -4));
+				const timestamp = toLogTimestamp(basename);
 				if (timestamp <= now - logAgeLimit) {
 					shouldDelete.push(filename); // Age limit exceeded
 				} else {
@@ -188,10 +189,9 @@ function startPolling(dirname, pollInterval, logSizeLimit, logAgeLimit, granular
 function getLatestLogFile(dirname) {
 	for (const basename of fs.readdirSync(dirname).sort().reverse()) {
 		if (isLogBasename(basename)) {
-			const filename = path.join(dirname, basename);
 			return {
-				filename,
-				timestamp: Number(basename.slice(0, -4)),
+				filename: path.join(dirname, basename),
+				timestamp: toLogTimestamp(basename),
 				size: 0,
 			};
 		}
@@ -200,16 +200,11 @@ function getLatestLogFile(dirname) {
 }
 
 function getNewLogFile(dirname, time = Date.now()) {
-	const basename = `${String(time).padStart(14, '0')}.log`;
 	return {
-		filename: path.join(dirname, basename),
+		filename: path.join(dirname, toLogBasename(time)),
 		timestamp: time,
 		size: 0,
 	};
-}
-
-function isLogBasename(basename) {
-	return /^[0-9]{14}\.log$/.test(basename);
 }
 
 function ignoreENOENT(err) {
