@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs/promises');
 const Vfs = require('../shared/vfs');
 const BulkParser = require('../shared/bulk-parser');
+const BlockParser = require('../shared/block-parser');
 const { STARTING_UP, WORKER_SPAWNED, WORKER_EXITED, MASTER_PING } = require('../shared/event-types');
 const { isLogBasename } = require('./common');
 
@@ -223,7 +224,7 @@ async function isRotating(file) {
 
 	let pendingWorkers = null;
 	for await (const block of BulkParser.read(readPages(file.handle))) {
-		for (const log of BulkParser.parse(block)) {
+		for (const log of BlockParser.parseAll(block)) {
 			const eventType = log[1];
 			if (eventType === STARTING_UP) {
 				return false;
