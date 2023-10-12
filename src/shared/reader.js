@@ -1,10 +1,11 @@
 'use strict';
 const BYTE_SLICE = Uint8Array.prototype.slice;
+const BYTE_COPY = Buffer.prototype.copy; // TODO: not available in browsers
+const TO_STRING = Buffer.prototype.toString; // TODO: not available in browsers
 const POOL_SIZE = 1024 * 8;
 const MAX_POOL_SLICE_SIZE = POOL_SIZE / 4;
 let POOL = new ArrayBuffer(POOL_SIZE);
 let POOL_OFFSET = 0;
-const { readUInt32LE } = Buffer.prototype;
 
 /*
 	This class provides the low-level functions for reading binary-format logs.
@@ -67,47 +68,30 @@ module.exports = class Reader {
 		);
 	}
 
-	// bytes(byteLength) {
-	// 	if (!Number.isInteger(byteLength)) {
-	// 		throw new TypeError('Expected byteLength to be an integer');
-	// 	}
+	bytes(byteLength) {
+		if (!Number.isInteger(byteLength)) {
+			throw new TypeError('Expected byteLength to be an integer');
+		}
 
-	// 	const { input } = this;
-	// 	if (this.offset + byteLength > input.byteLength) {
-	// 		throw new RangeError('BUFFER_SHORTAGE');
-	// 	}
-
-	// 	// TODO: measure if this is as good as Buffer.allocUnsafe()
-	// 	// if (byteLength <= MAX_POOL_SLICE_SIZE) {
-	// 	// 	if (POOL_OFFSET + byteLength > POOL_SIZE) {
-	// 	// 		POOL = new ArrayBuffer(POOL_SIZE);
-	// 	// 		POOL_OFFSET = 0;
-	// 	// 	}
-
-	// 	// 	const output = new Uint8Array(POOL, POOL_OFFSET, byteLength);
-	// 	// 	POOL_OFFSET += byteLength;
-	// 	// 	output.set(input.subarray(this.offset, this.offset += byteLength));
-	// 	// 	return output;
-	// 	// }
-
-	// 	// TODO: BYTE_SLICE could return a Buffer, but it should always be a Uint8Array
-	// 	return BYTE_SLICE.call(input, this.offset, this.offset += byteLength);
-	// }
-
-	// TODO: rename this to bytes16
-	bytes() {
 		const { input } = this;
-		if (this.offset + 16 > input.byteLength) {
+		if (this.offset + byteLength > input.byteLength) {
 			throw new RangeError('BUFFER_SHORTAGE');
 		}
 
-		const output = Buffer.allocUnsafe(16);
-		output.writeUInt32LE(readUInt32LE.call(input, this.offset), 0);
-		output.writeUInt32LE(readUInt32LE.call(input, this.offset += 4), 4);
-		output.writeUInt32LE(readUInt32LE.call(input, this.offset += 4), 8);
-		output.writeUInt32LE(readUInt32LE.call(input, this.offset += 4), 12);
-		this.offset += 4;
-		return output;
+		if (byteLength <= MAX_POOL_SLICE_SIZE) {
+			if (POOL_OFFSET + byteLength > POOL_SIZE) {
+				POOL = new ArrayBuffer(POOL_SIZE);
+				POOL_OFFSET = 0;
+			}
+
+			const output = new Uint8Array(POOL, POOL_OFFSET, byteLength);
+			POOL_OFFSET += byteLength;
+			BYTE_COPY.call(input, output, 0, this.offset, this.offset += byteLength);
+			return output;
+		}
+
+		// TODO: BYTE_SLICE could return a Buffer, but it should always be a Uint8Array
+		return BYTE_SLICE.call(input, this.offset, this.offset += byteLength);
 	}
 
 	string() {
@@ -124,9 +108,7 @@ module.exports = class Reader {
 		if (byteLength <= 24) {
 			return readUtf8(input, this.offset, this.offset += byteLength);
 		} else {
-			// TODO: this doesn't work in browsers
-			return Buffer.from(input.buffer, input.byteOffset, input.byteLength)
-				.toString('utf8', this.offset, this.offset += byteLength);
+			return TO_STRING.call(input, 'utf8', this.offset, this.offset += byteLength);
 		}
 	}
 
