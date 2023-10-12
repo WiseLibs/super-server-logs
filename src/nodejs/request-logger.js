@@ -151,7 +151,7 @@ function encodeIpAddress(ipAddressString) {
 		return Buffer.from(bytes.slice(offset));
 	} else {
 		const bytes = new Address4(ipAddressString).toArray();
-		return (bytes[0] * 0x1000000) +
+		return bytes[0] * 0x1000000 +
 			(bytes[1] << 16 |
 			bytes[2] << 8 |
 			bytes[3]);

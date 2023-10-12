@@ -55,7 +55,7 @@ declare namespace SuperServerLogs {
 	export namespace BulkParser {
 		export function read(input: AsyncIterable<Uint8Array>): AsyncIterableIterator<Uint8Array>;
 		export function readReversed(input: AsyncIterable<Uint8Array>): AsyncIterableIterator<Uint8Array>;
-		export function parse(block: Uint8Array): LogEntry[];
+		export function parse(block: Uint8Array): IterableIterator<LogEntry>;
 	}
 
 	export class LogManager extends EventEmitter {

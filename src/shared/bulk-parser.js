@@ -10,6 +10,7 @@ exports.read = async function* read(input) {
 	let outputBuffer = new Uint8Array();
 
 	for await (const data of input) {
+		// TODO: normalize 'data' (Buffer to Uint8Array)
 		if (!(data instanceof Uint8Array)) {
 			throw new TypeError('Expected data to be a Uint8Array');
 		}
@@ -46,6 +47,7 @@ exports.readReversed = async function* readReversed(input) {
 	let isBlockBundary = false;
 
 	for await (const data of input) {
+		// TODO: normalize 'data' (Buffer to Uint8Array)
 		if (!(data instanceof Uint8Array)) {
 			throw new TypeError('Expected data to be a Uint8Array');
 		}
@@ -108,16 +110,14 @@ exports.readReversed = async function* readReversed(input) {
 };
 
 // Parses a block into an array of logs.
-exports.parse = (block) => {
-	return BlockParser.parseAll(block).map(toLogEntry);
+exports.parse = function* parse(block) {
+	for (const log of BlockParser.parseEach(block)) {
+		yield new LogEntry(log);
+	}
 };
 
-function toLogEntry(log) {
-	return new LogEntry(log);
-}
-
 function readUint32(chunk) {
-	return (chunk[0] * 0x1000000) +
+	return chunk[0] * 0x1000000 +
 		(chunk[1] << 16 |
 		chunk[2] << 8 |
 		chunk[3]);

@@ -17,7 +17,7 @@ const { compress } = require('../shared/common');
  */
 
 module.exports = class Logger {
-	constructor(filename, { highWaterMark = 1024 * 32, outputDelay = 100 } = {}) {
+	constructor(filename, { highWaterMark = 1024 * 32, outputDelay = 100, compression = true } = {}) {
 		if (typeof filename !== 'string' && filename !== null) {
 			throw new TypeError('Expected filename to be a string or null');
 		}
@@ -26,6 +26,9 @@ module.exports = class Logger {
 		}
 		if (!Number.isInteger(outputDelay)) {
 			throw new TypeError('Expected options.outputDelay to be an integer');
+		}
+		if (typeof compression !== 'boolean') {
+			throw new TypeError('Expected options.compression to be a boolean');
 		}
 		if (highWaterMark < 0) {
 			throw new RangeError('Expected options.highWaterMark to be non-negative');
@@ -42,6 +45,7 @@ module.exports = class Logger {
 		this._outgoingSize = 0;
 		this._highWaterMark = highWaterMark;
 		this._outputDelay = outputDelay;
+		this._compression = compression;
 		this._timer = null;
 		this._flush = flush.bind(this);
 	}
@@ -130,7 +134,7 @@ function flush() {
 	let block = outgoing.length > 1 ? Buffer.concat(outgoing) : outgoing[0];
 	let trailer = TRAILER_UNCOMPRESSED;
 
-	if (block.byteLength >= MINIMUM_COMPRESSIBLE_SIZE) {
+	if (this._compression && block.byteLength >= MINIMUM_COMPRESSIBLE_SIZE) {
 		block = compress(block);
 		trailer = TRAILER_COMPRESSED;
 	}

@@ -224,7 +224,7 @@ async function isRotating(file) {
 
 	let pendingWorkers = null;
 	for await (const block of BulkParser.read(readPages(file.handle))) {
-		for (const log of BlockParser.parseAll(block)) {
+		for (const log of BlockParser.parseEach(block)) {
 			const eventType = log[1];
 			if (eventType === STARTING_UP) {
 				return false;

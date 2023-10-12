@@ -233,7 +233,7 @@ module.exports = class Scanner {
 	}
 
 	_enterBlock(block, prevOffset) {
-		this._nextLogs = BlockParser.parseAll(block);
+		this._nextLogs = [...BlockParser.parseEach(block)];
 		this._prevLogs = [];
 		this._nextOffset = this._chunkOffset;
 		this._prevOffset = prevOffset;

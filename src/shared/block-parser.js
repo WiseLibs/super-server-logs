@@ -1,7 +1,5 @@
 'use strict';
 const Msgpack = require('tiny-msgpack');
-const Paper = require('tiny-msgpack/lib/paper');
-const decode = require('tiny-msgpack/lib/decode');
 const BufferUtil = require('./buffer-util');
 const { decompress } = require('./common');
 const { ESCAPE, SEPARATOR, TRAILER_LENGTH, ESCAPED_SEQUENCE_LENGTH } = require('./constants');
@@ -23,7 +21,7 @@ exports.parseOne = (block) => {
 	return Msgpack.decode(block);
 };
 
-exports.parseAll = (block) => {
+exports.parseEach = (block) => {
 	if (!(block instanceof Uint8Array)) {
 		throw new TypeError('Expected block to be a Uint8Array');
 	}
@@ -37,15 +35,7 @@ exports.parseAll = (block) => {
 	block = unescapeBlock(block);
 	block = isCompressed ? decompress(block) : block;
 
-	const logs = [];
-	const decoder = new Paper();
-	decoder.setBuffer(block);
-
-	while (decoder.offset < block.byteLength) {
-		logs.push(decode(decoder));
-	}
-
-	return logs;
+	return Msgpack.decodeEach(block);
 };
 
 function unescapeBlock(block) {
