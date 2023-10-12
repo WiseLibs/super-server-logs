@@ -2,6 +2,7 @@
 const EventTypes = require('../shared/event-types');
 const ExceptionUtil = require('../shared/exception-util');
 const LimitQueue = require('./limit-queue');
+const Writer = require('./writer');
 const Logger = require('./logger');
 
 /*
@@ -44,34 +45,48 @@ module.exports = class MasterLogger extends Logger {
 	}
 
 	STARTING_UP() {
-		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.STARTING_UP, this._nonce()]).flush();
-		this._workerIds.clear();
+		if (this._fd >= 0) {
+			this._lifecycle(EventTypes.STARTING_UP).flush();
+			this._workerIds.clear();
+		}
 		return this;
 	}
 
 	STARTING_UP_COMPLETED() {
-		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.STARTING_UP_COMPLETED, this._nonce()]).flush();
+		if (this._fd >= 0) {
+			this._lifecycle(EventTypes.STARTING_UP_COMPLETED).flush();
+		}
+		return this;
 	}
 
 	SHUTTING_DOWN() {
-		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.SHUTTING_DOWN, this._nonce()]).flush();
+		if (this._fd >= 0) {
+			this._lifecycle(EventTypes.SHUTTING_DOWN).flush();
+		}
+		return this;
 	}
 
 	SHUTTING_DOWN_COMPLETED() {
-		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.SHUTTING_DOWN_COMPLETED, this._nonce()]).flush();
+		if (this._fd >= 0) {
+			this._lifecycle(EventTypes.SHUTTING_DOWN_COMPLETED).flush();
+		}
+		return this;
 	}
 
 	WORKER_SPAWNED(workerId) {
 		if (!Number.isInteger(workerId)) {
 			throw new TypeError('Expected workerId to be an integer');
 		}
-		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_SPAWNED, this._nonce(), workerId]).flush();
-		this._workerIds.add(workerId);
+		if (this._fd >= 0) {
+			super.log(new Writer()
+				.uint8(EventTypes.WORKER_SPAWNED)
+				.uint48(Date.now())
+				.uint16(this._nonce())
+				.dynamicInteger(workerId)
+				.done()
+			).flush();
+			this._workerIds.add(workerId);
+		}
 		return this;
 	}
 
@@ -85,41 +100,56 @@ module.exports = class MasterLogger extends Logger {
 		if (signal !== null && typeof signal !== 'string') {
 			throw new TypeError('Expected signal to be a string or null');
 		}
-		if (this._fd < 0) return this;
-		super.log([Date.now(), EventTypes.WORKER_EXITED, this._nonce(), workerId, exitCode, signal]).flush();
-		this._workerIds.delete(workerId);
+		if (this._fd >= 0) {
+			super.log(new Writer()
+				.uint8(EventTypes.WORKER_EXITED)
+				.uint48(Date.now())
+				.uint16(this._nonce())
+				.dynamicInteger(workerId)
+				.uint8(exitCode)
+				.string(signal || '')
+				.done()
+			).flush();
+			this._workerIds.delete(workerId);
+		}
 		return this;
 	}
 
 	UNCAUGHT_EXCEPTION(err) {
-		if (this._fd < 0) return this;
-		const exceptionData = ExceptionUtil.encode(err, this._debugLogs.drain());
-		return super.log([Date.now(), EventTypes.MASTER_UNCAUGHT_EXCEPTION, this._nonce(), exceptionData]);
+		if (this._fd >= 0) {
+			super.log(new Writer()
+				.uint8(EventTypes.MASTER_UNCAUGHT_EXCEPTION)
+				.uint48(Date.now())
+				.uint16(this._nonce())
+				.json(ExceptionUtil.encode(err, this._debugLogs.drain()))
+				.done()
+			);
+		}
+		return this;
 	}
 
 	critical(data) {
-		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.MASTER_LOG_CRITICAL, this._nonce(), data]);
+		if (this._fd >= 0) this._log(EventTypes.MASTER_LOG_CRITICAL, data);
+		return this;
 	}
 
 	error(data) {
-		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.MASTER_LOG_ERROR, this._nonce(), data]);
+		if (this._fd >= 0) this._log(EventTypes.MASTER_LOG_ERROR, data);
+		return this;
 	}
 
 	warn(data) {
-		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.MASTER_LOG_WARN, this._nonce(), data]);
+		if (this._fd >= 0) this._log(EventTypes.MASTER_LOG_WARN, data);
+		return this;
 	}
 
 	info(data) {
-		if (this._fd < 0) return this;
-		return super.log([Date.now(), EventTypes.MASTER_LOG_INFO, this._nonce(), data]);
+		if (this._fd >= 0) this._log(EventTypes.MASTER_LOG_INFO, data);
+		return this;
 	}
 
 	debug(data) {
-		if (this._fd < 0) return this;
-		this._debugLogs.push([Date.now(), data]);
+		if (this._fd >= 0) this._debugLogs.push([Date.now(), data]);
 		return this;
 	}
 
@@ -128,9 +158,11 @@ module.exports = class MasterLogger extends Logger {
 	}
 
 	rotate(filename) {
-		if (this._fd < 0) return this;
-		super.rotate(filename);
-		return this._ping().flush();
+		if (this._fd >= 0) {
+			super.rotate(filename);
+			this._ping().flush();
+		}
+		return this;
 	}
 
 	close() {
@@ -139,8 +171,33 @@ module.exports = class MasterLogger extends Logger {
 		return this;
 	}
 
+	_lifecycle(eventType) {
+		return super.log(new Writer()
+			.uint8(eventType)
+			.uint48(Date.now())
+			.uint16(this._nonce())
+			.done()
+		);
+	}
+
+	_log(eventType, data) {
+		return super.log(new Writer()
+			.uint8(eventType)
+			.uint48(Date.now())
+			.uint16(this._nonce())
+			.json(data)
+			.done()
+		);
+	}
+
 	_ping() {
-		return super.log([Date.now(), EventTypes.MASTER_PING, this._nonce(), [...this._workerIds]]);
+		return super.log(new Writer()
+			.uint8(EventTypes.MASTER_PING)
+			.uint48(Date.now())
+			.uint16(this._nonce())
+			.dynamicIntegerArray([...this._workerIds])
+			.done()
+		);
 	}
 
 	_nonce() {

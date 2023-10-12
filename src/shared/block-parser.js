@@ -1,5 +1,6 @@
 'use strict';
-const Msgpack = require('tiny-msgpack');
+const Reader = require('./reader');
+const LogEntry = require('./log-entry');
 const BufferUtil = require('./buffer-util');
 const { decompress } = require('./common');
 const { ESCAPE, SEPARATOR, TRAILER_LENGTH, ESCAPED_SEQUENCE_LENGTH } = require('./constants');
@@ -12,13 +13,7 @@ exports.parseOne = (block) => {
 		throw new RangeError('Unexpected empty block');
 	}
 
-	const isCompressed = block[block.byteLength - 1] & 1;
-
-	block = block.subarray(0, block.byteLength - TRAILER_LENGTH);
-	block = unescapeBlock(block);
-	block = isCompressed ? decompress(block) : block;
-
-	return Msgpack.decode(block);
+	return new LogEntry(new Reader(unwrapBlock(block)));
 };
 
 exports.parseEach = (block) => {
@@ -29,14 +24,37 @@ exports.parseEach = (block) => {
 		throw new RangeError('Unexpected empty block');
 	}
 
-	const isCompressed = block[block.byteLength - 1] & 1;
+	const reader = new Reader(unwrapBlock(block));
+	const end = reader.input.byteLength;
 
+	return {
+		next() {
+			if (reader.offset < end) {
+				return { value: new LogEntry(reader), done: false };
+			} else {
+				return { value: undefined, done: true };
+			}
+		},
+		return(value) {
+			reader.offset = end;
+			return { value, done: true };
+		},
+		throw(reason) {
+			reader.offset = end;
+			throw reason;
+		},
+		[Symbol.iterator]() {
+			return this;
+		},
+	};
+};
+
+function unwrapBlock(block) {
+	const isCompressed = block[block.byteLength - 1] & 1;
 	block = block.subarray(0, block.byteLength - TRAILER_LENGTH);
 	block = unescapeBlock(block);
-	block = isCompressed ? decompress(block) : block;
-
-	return Msgpack.decodeEach(block);
-};
+	return isCompressed ? decompress(block) : block;
+}
 
 function unescapeBlock(block) {
 	let indexOfEscape = BufferUtil.indexOf(block, ESCAPE);

@@ -1,5 +1,4 @@
 'use strict';
-const EventTypes = require('./event-types');
 
 exports.LogType = Object.assign(Object.create(null), {
 	REQUEST: 1,

@@ -1,5 +1,4 @@
 'use strict';
-const LogEntry = require('./log-entry');
 const BufferUtil = require('./buffer-util');
 const BlockParser = require('./block-parser');
 const { findNextSeparator, findPrevSeparator } = require('./common');
@@ -110,10 +109,8 @@ exports.readReversed = async function* readReversed(input) {
 };
 
 // Parses a block into an array of logs.
-exports.parse = function* parse(block) {
-	for (const log of BlockParser.parseEach(block)) {
-		yield new LogEntry(log);
-	}
+exports.parse = (block) => {
+	return BlockParser.parseEach(block);
 };
 
 function readUint32(chunk) {

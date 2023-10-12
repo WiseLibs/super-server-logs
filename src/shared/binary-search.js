@@ -47,7 +47,7 @@ module.exports = async (vfs, totalSize, desiredTimestamp) => {
 			log = await getPageLog(vfs, ++midMax);
 		}
 
-		const timestamp = log[0];
+		const { timestamp } = log;
 		if (!Number.isInteger(timestamp)) {
 			throw new TypeError('Corrupted logs detected');
 		}

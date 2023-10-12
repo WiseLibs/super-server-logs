@@ -3,8 +3,7 @@ const path = require('path');
 const fs = require('fs/promises');
 const Vfs = require('../shared/vfs');
 const BulkParser = require('../shared/bulk-parser');
-const BlockParser = require('../shared/block-parser');
-const { STARTING_UP, WORKER_SPAWNED, WORKER_EXITED, MASTER_PING } = require('../shared/event-types');
+const { Lifecycle: { STARTING_UP, MASTER_PING } } = require('../shared/public-enums');
 const { isLogBasename } = require('./common');
 
 const PAGE_SIZE = Vfs.PAGE_SIZE;
@@ -224,25 +223,17 @@ async function isRotating(file) {
 
 	let pendingWorkers = null;
 	for await (const block of BulkParser.read(readPages(file.handle))) {
-		for (const log of BlockParser.parseEach(block)) {
-			const eventType = log[1];
-			if (eventType === STARTING_UP) {
+		for (const log of BulkParser.parse(block)) {
+			if (log.event === STARTING_UP) {
 				return false;
 			} else if (!pendingWorkers) {
-				if (eventType === MASTER_PING) {
-					pendingWorkers = new Set(log[3]);
+				if (log.event === MASTER_PING) {
+					pendingWorkers = new Set(log.workerIds);
 				}
-			} else {
-				if (eventType < 40 /* worker/request/response events */) {
-					pendingWorkers.delete(log[3]);
-					if (!pendingWorkers.size) {
-						return false;
-					}
-				} else if (eventType === WORKER_EXITED) {
-					pendingWorkers.delete(log[3]);
-					if (!pendingWorkers.size) {
-						return false;
-					}
+			} else if (log.workerId != null) {
+				pendingWorkers.delete(log.workerId);
+				if (!pendingWorkers.size) {
+					return false;
 				}
 			}
 		}

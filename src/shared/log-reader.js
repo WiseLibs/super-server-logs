@@ -1,7 +1,6 @@
 'use strict';
 const Vfs = require('./vfs');
 const Scanner = require('./scanner');
-const LogEntry = require('./log-entry');
 const BoundFinder = require('./bound-finder');
 const binarySearch = require('./binary-search');
 
@@ -54,9 +53,8 @@ module.exports = class LogReader {
 
 			for (;;) {
 				for await (const log of scanner.forwardScan()) {
-					const [timestamp] = log;
-					if (timestamp >= minTimestamp) {
-						yield new LogEntry(log);
+					if (log.timestamp >= minTimestamp) {
+						yield log;
 					}
 				}
 
@@ -112,9 +110,9 @@ module.exports = class LogReader {
 
 			const upperBound = new BoundFinder(maxTimestamp, lowerBound.state);
 			for await (const log of scanner.forwardScan()) {
-				const [timestamp] = log;
+				const { timestamp } = log;
 				if (timestamp >= minTimestamp && timestamp <= maxTimestamp) {
-					yield new LogEntry(log);
+					yield log;
 				}
 				if (upperBound.reachedUpperBound(log)) {
 					break;
@@ -160,9 +158,9 @@ module.exports = class LogReader {
 
 			const lowerBound = new BoundFinder(minTimestamp, upperBound.state);
 			for await (const log of scanner.backwardScan()) {
-				const [timestamp] = log;
+				const { timestamp } = log;
 				if (timestamp >= minTimestamp && timestamp <= maxTimestamp) {
-					yield new LogEntry(log);
+					yield log;
 				}
 				if (lowerBound.reachedLowerBound(log)) {
 					break;

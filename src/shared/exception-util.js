@@ -35,12 +35,15 @@ exports.decode = ([type, value, properties, debugLogs]) => {
 		debug.push({ timestamp, data });
 	}
 
-	const result = { properties, debug };
+	const result = {};
 	if (type === ARBITRARY_VALUE) {
 		result.value = value;
 	} else {
 		result.stack = value;
 	}
+
+	result.properties = properties;
+	result.debug = debug;
 
 	return result;
 };

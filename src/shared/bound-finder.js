@@ -1,5 +1,5 @@
 'use strict';
-const { STARTING_UP, WORKER_SPAWNED, WORKER_EXITED, MASTER_PING } = require('./event-types');
+const { Lifecycle: { STARTING_UP, WORKER_SPAWNED, WORKER_EXITED, MASTER_PING } } = require('./public-enums');
 
 /*
 	Given a timestamp and a series of logs, BoundFinder detects when all future
@@ -44,57 +44,56 @@ module.exports = class BoundFinder {
 
 	reachedUpperBound(log) {
 		const pendingWorkers = this._pendingWorkers;
-		const [timestamp, eventType] = log;
-		if (eventType < 40 /* worker/request/response events */) {
-			if (pendingWorkers && timestamp > this._timestampBound) {
-				pendingWorkers.delete(log[3]);
+		if (log.workerId != null && !(log.event >= STARTING_UP)) {
+			if (pendingWorkers && log.timestamp > this._timestampBound) {
+				pendingWorkers.delete(log.workerId);
 				if (!pendingWorkers.size) {
 					return true;
 				}
 			}
-		} else if (eventType === STARTING_UP) {
+		} else if (log.event === STARTING_UP) {
 			this._allWorkers = new Set([-1]);
-			if (timestamp > this._timestampBound) {
+			if (log.timestamp > this._timestampBound) {
 				return true;
 			} else {
 				this._pendingWorkers = new Set([-1]);
 			}
 		} else {
 			if (!pendingWorkers) {
-				if (eventType === MASTER_PING) {
-					this._allWorkers = new Set([-1, ...log[3]]);
-					if (timestamp > this._timestampBound) {
-						if (!log[3].length) {
+				if (log.event === MASTER_PING) {
+					this._allWorkers = new Set([-1, ...log.workerIds]);
+					if (log.timestamp > this._timestampBound) {
+						if (!log.workerIds.length) {
 							return true;
 						} else {
-							this._pendingWorkers = new Set(log[3]);
+							this._pendingWorkers = new Set(log.workerIds);
 						}
 					} else {
 						this._pendingWorkers = new Set(this._allWorkers);
 					}
 				}
 			} else {
-				if (eventType === WORKER_SPAWNED) {
-					this._allWorkers.add(log[3]);
-					if (timestamp > this._timestampBound) {
+				if (log.event === WORKER_SPAWNED) {
+					this._allWorkers.add(log.workerId);
+					if (log.timestamp > this._timestampBound) {
 						pendingWorkers.delete(-1);
 						if (!pendingWorkers.size) {
 							return true;
 						}
 					} else {
-						pendingWorkers.add(log[3]);
+						pendingWorkers.add(log.workerId);
 					}
-				} else if (eventType === WORKER_EXITED) {
-					this._allWorkers.delete(log[3]);
-					pendingWorkers.delete(log[3]);
-					if (timestamp > this._timestampBound) {
+				} else if (log.event === WORKER_EXITED) {
+					this._allWorkers.delete(log.workerId);
+					pendingWorkers.delete(log.workerId);
+					if (log.timestamp > this._timestampBound) {
 						pendingWorkers.delete(-1);
 					}
 					if (!pendingWorkers.size) {
 						return true;
 					}
 				} else {
-					if (timestamp > this._timestampBound) {
+					if (log.timestamp > this._timestampBound) {
 						pendingWorkers.delete(-1);
 						if (!pendingWorkers.size) {
 							return true;
@@ -108,57 +107,56 @@ module.exports = class BoundFinder {
 
 	reachedLowerBound(log) {
 		const pendingWorkers = this._pendingWorkers;
-		const [timestamp, eventType] = log;
-		if (eventType < 40 /* worker/request/response events */) {
-			if (pendingWorkers && timestamp < this._timestampBound) {
-				pendingWorkers.delete(log[3]);
+		if (log.workerId != null && !(log.event >= STARTING_UP)) {
+			if (pendingWorkers && log.timestamp < this._timestampBound) {
+				pendingWorkers.delete(log.workerId);
 				if (!pendingWorkers.size) {
 					return true;
 				}
 			}
-		} else if (eventType === STARTING_UP) {
+		} else if (log.event === STARTING_UP) {
 			this._allWorkers = null;
-			if (timestamp < this._timestampBound) {
+			if (log.timestamp < this._timestampBound) {
 				return true;
 			} else {
 				this._pendingWorkers = null;
 			}
 		} else {
 			if (!pendingWorkers) {
-				if (eventType === MASTER_PING) {
-					this._allWorkers = new Set([-1, ...log[3]]);
-					if (timestamp < this._timestampBound) {
-						if (!log[3].length) {
+				if (log.event === MASTER_PING) {
+					this._allWorkers = new Set([-1, ...log.workerIds]);
+					if (log.timestamp < this._timestampBound) {
+						if (!log.workerIds.length) {
 							return true;
 						} else {
-							this._pendingWorkers = new Set(log[3]);
+							this._pendingWorkers = new Set(log.workerIds);
 						}
 					} else {
 						this._pendingWorkers = new Set(this._allWorkers);
 					}
 				}
 			} else {
-				if (eventType === WORKER_SPAWNED) {
-					this._allWorkers.delete(log[3]);
-					pendingWorkers.delete(log[3]);
-					if (timestamp < this._timestampBound) {
+				if (log.event === WORKER_SPAWNED) {
+					this._allWorkers.delete(log.workerId);
+					pendingWorkers.delete(log.workerId);
+					if (log.timestamp < this._timestampBound) {
 						pendingWorkers.delete(-1);
 					}
 					if (!pendingWorkers.size) {
 						return true;
 					}
-				} else if (eventType === WORKER_EXITED) {
-					this._allWorkers.add(log[3]);
-					if (timestamp < this._timestampBound) {
+				} else if (log.event === WORKER_EXITED) {
+					this._allWorkers.add(log.workerId);
+					if (log.timestamp < this._timestampBound) {
 						pendingWorkers.delete(-1);
 						if (!pendingWorkers.size) {
 							return true;
 						}
 					} else {
-						pendingWorkers.add(log[3]);
+						pendingWorkers.add(log.workerId);
 					}
 				} else {
-					if (timestamp < this._timestampBound) {
+					if (log.timestamp < this._timestampBound) {
 						pendingWorkers.delete(-1);
 						if (!pendingWorkers.size) {
 							return true;

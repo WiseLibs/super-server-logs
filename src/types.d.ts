@@ -17,28 +17,30 @@ declare namespace SuperServerLogs {
 	}
 
 	export class LogEntry {
-		constructor(log: [number, number, number, ...any]);
+		private constructor();
 		readonly timestamp: number;
 		readonly nonce: number;
 		readonly level: LogLevel;
 		readonly type: LogType;
 		readonly workerId: number | null;
 		readonly requestId?: Uint8Array | null;
-		readonly ipAddress?: number | Uint8Array;
 		readonly httpVersionMajor?: number;
 		readonly httpVersionMinor?: number;
-		readonly url?: string;
+		readonly ipAddress?: number | Uint8Array;
 		readonly method?: HttpMethod | string;
+		readonly url?: string;
 		readonly statusCode?: number;
 		readonly exitCode?: number;
 		readonly signal?: string | null;
-		readonly data?: unknown;
-		readonly error?: ErrorInfo | null;
+		readonly data?: string;
+		readonly error?: string | null;
 		readonly event?: Lifecycle;
+		readonly workerIds?: ReadonlyArray<number>;
 		getRequestId(): string | null | undefined;
 		getIpAddress(): string | undefined;
 		getHttpVersion(): string | undefined;
 		getHttpMethod(): string | undefined;
+		getError(): ErrorInfo | null | undefined;
 		toJSON(): object;
 	}
 
@@ -119,7 +121,7 @@ declare namespace SuperServerLogs {
 	}
 
 	export class RequestLogger {
-		constructor(parent: WorkerLogger, logFn: (data: any) => any);
+		private constructor();
 		REQUEST(req: HttpRequest): this;
 		REQUEST_META(data: any): this;
 		RESPONSE(statusCode: number, err?: any): this;
@@ -186,10 +188,10 @@ declare namespace SuperServerLogs {
 	}
 
 	export interface ErrorInfo {
-		properties: Record<string, unknown>;
-		debug: DebugLogEntry[];
 		stack?: string;
 		value?: string;
+		properties: Record<string, unknown>;
+		debug: DebugLogEntry[];
 	}
 
 	export interface DebugLogEntry {

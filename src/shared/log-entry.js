@@ -4,6 +4,7 @@ const { Address6 } = require('ip-address');
 const { LogType, LogLevel, Lifecycle, HttpMethod } = require('./public-enums');
 const ExceptionUtil = require('./exception-util');
 const EventTypes = require('./event-types');
+const Reader = require('./reader');
 const {
 	REQUEST,
 	REQUEST_META,
@@ -48,55 +49,56 @@ const {
  */
 
 module.exports = class LogEntry {
-	constructor(log) {
-		if (!Array.isArray(log)) {
-			throw new TypeError('Expected log to be a raw log array');
+	constructor(reader) {
+		if (!(reader instanceof Reader)) {
+			throw new TypeError('Expected argument to be a Reader');
 		}
 
-		const [timestamp, eventType, nonce] = log;
-		if (!Number.isInteger(timestamp)
-			|| !Number.isInteger(eventType)
-			|| !Number.isInteger(nonce)
-		) {
-			throw new TypeError('Expected log to be a raw log array');
-		}
-
-		this.timestamp = timestamp;
-		this.nonce = nonce;
+		const eventType = reader.uint8();
+		this.timestamp = reader.uint48();
+		this.nonce = reader.uint16();
 
 		switch (eventType) {
-			case REQUEST:
+			case REQUEST: {
 				this.level = LogLevel.INFO;
 				this.type = LogType.REQUEST;
-				this.workerId = log[3];
-				this.requestId = log[4];
-				this.ipAddress = log[5];
-				this.httpVersionMajor = log[6];
-				this.httpVersionMinor = log[7];
-				this.url = log[8];
-				this.method = log[9];
+				this.workerId = reader.dynamicInteger();
+				this.requestId = reader.bytes(16);
+				const flagByte = reader.uint8();
+				this.httpVersionMajor = flagByte >> 3 & 0b111;
+				this.httpVersionMinor = flagByte & 0b111;
+				this.ipAddress = flagByte & 0b01000000 ? reader.bytes(16) : reader.uint32();
+				this.method = flagByte & 0b10000000 ? reader.string() : reader.uint8();
+				this.url = reader.string();
 				break;
+			}
 			case REQUEST_META:
 				this.level = LogLevel.INFO;
 				this.type = LogType.REQUEST_META;
-				this.workerId = log[3];
-				this.requestId = log[4];
-				this.data = log[5];
+				this.workerId = reader.dynamicInteger();
+				this.requestId = reader.bytes(16);
+				this.data = reader.string();
 				break;
 			case RESPONSE:
-				this.level = log[5] ? LogLevel.ERROR : LogLevel.INFO;
+				this.level = LogLevel.INFO
 				this.type = LogType.RESPONSE;
-				this.workerId = log[3];
-				this.requestId = log[4];
-				this.error = log[5] && ExceptionUtil.decode(log[5]);
-				this.statusCode = log[6];
+				this.workerId = reader.dynamicInteger();
+				this.requestId = reader.bytes(16);
+				this.error = reader.string() || null;
+				this.statusCode = reader.dynamicInteger();
+				if (this.error) {
+					this.level = LogLevel.ERROR;
+				}
 				break;
 			case RESPONSE_FINISHED:
-				this.level = log[5] ? LogLevel.ERROR : LogLevel.INFO;
+				this.level = LogLevel.INFO;
 				this.type = LogType.RESPONSE_FINISHED;
-				this.workerId = log[3];
-				this.requestId = log[4];
-				this.error = log[5] && ExceptionUtil.decode(log[5]);
+				this.workerId = reader.dynamicInteger();
+				this.requestId = reader.bytes(16);
+				this.error = reader.string() || null;
+				if (this.error) {
+					this.level = LogLevel.ERROR;
+				}
 				break;
 			case REQUEST_LOG_CRITICAL:
 			case REQUEST_LOG_ERROR:
@@ -104,9 +106,9 @@ module.exports = class LogEntry {
 			case REQUEST_LOG_INFO:
 				this.level = eventType - 10;
 				this.type = LogType.LOG;
-				this.workerId = log[3];
-				this.requestId = log[4];
-				this.data = log[5];
+				this.workerId = reader.dynamicInteger();
+				this.requestId = reader.bytes(16);
+				this.data = reader.string();
 				break;
 			case WORKER_STARTED:
 			case WORKER_GOING_ONLINE:
@@ -116,19 +118,19 @@ module.exports = class LogEntry {
 			case WORKER_DONE:
 				this.level = LogLevel.INFO;
 				this.type = LogType.LIFECYCLE;
-				this.workerId = log[3];
+				this.workerId = reader.dynamicInteger();
 				this.event = EVENT_TO_LIFECYCLE[eventType];
 				break;
 			case WORKER_UNCAUGHT_EXCEPTION:
 				this.level = LogLevel.CRITICAL;
 				this.type = LogType.UNCAUGHT_EXCEPTION;
-				this.workerId = log[3];
-				this.error = ExceptionUtil.decode(log[4]);
+				this.workerId = reader.dynamicInteger();
+				this.error = reader.string();
 				break;
 			case WORKER_PING:
 				this.level = LogLevel.INTERNAL;
 				this.type = LogType.LIFECYCLE;
-				this.workerId = log[3];
+				this.workerId = reader.dynamicInteger();
 				this.event = EVENT_TO_LIFECYCLE[eventType];
 				break;
 			case WORKER_LOG_CRITICAL:
@@ -137,9 +139,9 @@ module.exports = class LogEntry {
 			case WORKER_LOG_INFO:
 				this.level = eventType - 30;
 				this.type = LogType.LOG;
-				this.workerId = log[3];
+				this.workerId = reader.dynamicInteger();
 				this.requestId = null;
-				this.data = log[4];
+				this.data = reader.string();
 				break;
 			case STARTING_UP:
 			case STARTING_UP_COMPLETED:
@@ -153,28 +155,32 @@ module.exports = class LogEntry {
 			case WORKER_SPAWNED:
 				this.level = LogLevel.INFO;
 				this.type = LogType.LIFECYCLE;
-				this.workerId = log[3];
+				this.workerId = reader.dynamicInteger();
 				this.event = EVENT_TO_LIFECYCLE[eventType];
 				break;
 			case WORKER_EXITED:
-				this.level = log[4] === 0 ? LogLevel.INFO : LogLevel.WARN;
+				this.level = LogLevel.INFO;
 				this.type = LogType.LIFECYCLE;
-				this.workerId = log[3];
+				this.workerId = reader.dynamicInteger();
 				this.event = EVENT_TO_LIFECYCLE[eventType];
-				this.exitCode = log[4];
-				this.signal = log[5];
+				this.exitCode = reader.uint8();
+				this.signal = reader.string() || null;
+				if (this.exitCode !== 0) {
+					this.level = LogLevel.WARN;
+				}
 				break;
 			case MASTER_UNCAUGHT_EXCEPTION:
 				this.level = LogLevel.CRITICAL;
 				this.type = LogType.UNCAUGHT_EXCEPTION;
 				this.workerId = null;
-				this.error = ExceptionUtil.decode(log[3]);
+				this.error = reader.string();
 				break;
 			case MASTER_PING:
 				this.level = LogLevel.INTERNAL;
 				this.type = LogType.LIFECYCLE;
 				this.workerId = null;
 				this.event = EVENT_TO_LIFECYCLE[eventType];
+				this.workerIds = reader.dynamicIntegerArray();
 				break;
 			case MASTER_LOG_CRITICAL:
 			case MASTER_LOG_ERROR:
@@ -184,7 +190,7 @@ module.exports = class LogEntry {
 				this.type = LogType.LOG;
 				this.workerId = null;
 				this.requestId = null;
-				this.data = log[3];
+				this.data = reader.string();
 				break;
 			default:
 				throw new Error('Unrecognized log event type');
@@ -216,6 +222,13 @@ module.exports = class LogEntry {
 		}
 	}
 
+	getError() {
+		if (this.error != null) {
+			return ExceptionUtil.decode(JSON.parse(this.error));
+		}
+		return this.error;
+	}
+
 	toJSON() {
 		const json = {
 			timestamp: this.timestamp,
@@ -235,20 +248,20 @@ module.exports = class LogEntry {
 				break;
 			case LogType.REQUEST_META:
 				json.requestId = uuidStringify(this.requestId);
-				json.data = this.data;
+				json.data = JSON.parse(this.data);
 				break;
 			case LogType.RESPONSE:
 				json.requestId = uuidStringify(this.requestId);
-				json.error = this.error;
+				json.error = this.error && ExceptionUtil.decode(JSON.parse(this.error));
 				json.statusCode = this.statusCode;
 				break;
 			case LogType.RESPONSE_FINISHED:
 				json.requestId = uuidStringify(this.requestId);
-				json.error = this.error;
+				json.error = this.error && ExceptionUtil.decode(JSON.parse(this.error));
 				break;
 			case LogType.LOG:
 				json.requestId = this.requestId && uuidStringify(this.requestId);
-				json.data = this.data;
+				json.data = JSON.parse(this.data);
 				break;
 			case LogType.LIFECYCLE:
 				json.event = LIFECYCLE_TO_JSON[this.event] || '';
@@ -258,7 +271,7 @@ module.exports = class LogEntry {
 				}
 				break;
 			case LogType.UNCAUGHT_EXCEPTION:
-				json.error = this.error;
+				json.error = ExceptionUtil.decode(JSON.parse(this.error));
 				break;
 		}
 
@@ -299,12 +312,10 @@ for (const [name, number] of Object.entries(HttpMethod)) {
 // If given an integer, an equivalant IPv4 address string is returned.
 // If given a Uint8Array, an equivalant IPv6 address string is returned.
 function decodeIpAddress(ipAddress) {
-	if (Number.isInteger(ipAddress) && ipAddress >= 0) {
+	if (Number.isInteger(ipAddress) && ipAddress >= 0 && ipAddress <= 0xffffffff) {
 		return `${ipAddress >>> 24 & 0xff}.${ipAddress >>> 16 & 0xff}.${ipAddress >>> 8 & 0xff}.${ipAddress & 0xff}`;
-	} else if (ipAddress instanceof Uint8Array && ipAddress.byteLength <= 16) {
-		const bytes = new Uint8Array(16);
-		bytes.set(ipAddress, 16 - ipAddress.byteLength);
-		return Address6.fromUnsignedByteArray(bytes).correctForm();
+	} else if (ipAddress instanceof Uint8Array && ipAddress.byteLength === 16) {
+		return Address6.fromUnsignedByteArray(ipAddress).correctForm();
 	} else {
 		throw new TypeError('Corrupted logs detected');
 	}

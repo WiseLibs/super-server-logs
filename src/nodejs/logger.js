@@ -1,13 +1,12 @@
 'use strict';
 const { openSync, closeSync, writevSync } = require('fs');
-const { encode } = require('tiny-msgpack');
 const { compress } = require('../shared/common');
 
 /*
-	A generic logger that writes MessagePack blobs to a file. It buffers its
-	output until either the highWaterMark is reached (in bytes) or the
-	outputDelay time has passed (in milliseconds). When the logger is closed,
-	all remaining buffered data is flushed synchronously.
+	A generic logger that writes binary chunks to a file. It buffers its output
+	until either the highWaterMark is reached (in bytes) or the outputDelay time
+	has passed (in milliseconds). When the logger is closed, all remaining
+	buffered data is flushed synchronously.
 
 	Whenever a group of logs are flushed to disk, they are first concatenated
 	into a single block, then compressed (except when their total size is very
@@ -51,13 +50,15 @@ module.exports = class Logger {
 	}
 
 	log(data) {
-		const buffer = encode(data);
+		if (!(data instanceof Uint8Array)) {
+			throw new TypeError('Expected argument to be a Uint8Array');
+		}
 		if (this._fd < 0) {
 			return this;
 		}
 
-		this._outgoing.push(buffer);
-		this._outgoingSize += buffer.byteLength;
+		this._outgoing.push(data);
+		this._outgoingSize += data.byteLength;
 
 		if (this._outgoingSize >= this._highWaterMark || this._outputDelay === 0) {
 			this._flush();

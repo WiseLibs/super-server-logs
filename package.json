@@ -22,7 +22,6 @@
   "dependencies": {
     "ip-address": "^9.0.5",
     "pako": "^2.1.0",
-    "tiny-msgpack": "^2.2.0",
     "uuid": "^9.0.0"
   }
 }

@@ -5,6 +5,7 @@ const { REQUEST, REQUEST_META, RESPONSE, RESPONSE_FINISHED } = require('../share
 const { REQUEST_LOG_CRITICAL, REQUEST_LOG_ERROR, REQUEST_LOG_WARN, REQUEST_LOG_INFO } = require('../shared/event-types');
 const { HttpMethod } = require('../shared/public-enums');
 const ExceptionUtil = require('../shared/exception-util');
+const Writer = require('./writer');
 const Logger = require('./logger');
 
 /*
@@ -41,9 +42,9 @@ module.exports = class RequestLogger {
 		}
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST, parent._nonce(), parent._workerId,
-				this._requestIdBuffer, encodeIpAddress(req.socket.remoteAddress),
-				req.httpVersionMajor, req.httpVersionMinor, req.url, encodeHttpMethod(req.method)]);
+			const writer = createWriter(REQUEST, parent, this._requestIdBuffer);
+			writeRequest(writer, req);
+			this._logFn.call(parent, writer.done());
 		}
 		return this;
 	}
@@ -51,8 +52,8 @@ module.exports = class RequestLogger {
 	REQUEST_META(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_META, parent._nonce(), parent._workerId,
-				this._requestIdBuffer, data]);
+			const writer = createWriter(REQUEST_META, parent, this._requestIdBuffer);
+			this._logFn.call(parent, writer.json(data).done());
 		}
 		return this;
 	}
@@ -63,10 +64,16 @@ module.exports = class RequestLogger {
 		}
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			const exceptionData = err == null ? null : ExceptionUtil.encode(err, this._debugLogs);
-			this._debugLogs = null;
-			this._logFn.call(parent, [Date.now(), RESPONSE, parent._nonce(), parent._workerId,
-				this._requestIdBuffer, exceptionData, statusCode]);
+			const writer = createWriter(RESPONSE, parent, this._requestIdBuffer);
+
+			if (err == null) {
+				writer.string('');
+			} else {
+				writer.json(ExceptionUtil.encode(err, this._debugLogs));
+				this._debugLogs = null;
+			}
+
+			this._logFn.call(parent, writer.dynamicInteger(statusCode).done());
 		}
 		return this;
 	}
@@ -74,10 +81,16 @@ module.exports = class RequestLogger {
 	RESPONSE_FINISHED(err) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			const exceptionData = err == null ? null : ExceptionUtil.encode(err, this._debugLogs);
-			this._debugLogs = null;
-			this._logFn.call(parent, [Date.now(), RESPONSE_FINISHED, parent._nonce(), parent._workerId,
-				this._requestIdBuffer, exceptionData]);
+			const writer = createWriter(RESPONSE_FINISHED, parent, this._requestIdBuffer);
+
+			if (err == null) {
+				writer.string('');
+			} else {
+				writer.json(ExceptionUtil.encode(err, this._debugLogs));
+				this._debugLogs = null;
+			}
+
+			this._logFn.call(parent, writer.done());
 		}
 		return this;
 	}
@@ -85,8 +98,8 @@ module.exports = class RequestLogger {
 	critical(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_LOG_CRITICAL, parent._nonce(), parent._workerId,
-				this._requestIdBuffer, data]);
+			const writer = createWriter(REQUEST_LOG_CRITICAL, parent, this._requestIdBuffer);
+			this._logFn.call(parent, writer.json(data).done());
 		}
 		return this;
 	}
@@ -94,8 +107,8 @@ module.exports = class RequestLogger {
 	error(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_LOG_ERROR, parent._nonce(), parent._workerId,
-				this._requestIdBuffer, data]);
+			const writer = createWriter(REQUEST_LOG_ERROR, parent, this._requestIdBuffer);
+			this._logFn.call(parent, writer.json(data).done());
 		}
 		return this;
 	}
@@ -103,8 +116,8 @@ module.exports = class RequestLogger {
 	warn(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_LOG_WARN, parent._nonce(), parent._workerId,
-				this._requestIdBuffer, data]);
+			const writer = createWriter(REQUEST_LOG_WARN, parent, this._requestIdBuffer);
+			this._logFn.call(parent, writer.json(data).done());
 		}
 		return this;
 	}
@@ -112,8 +125,8 @@ module.exports = class RequestLogger {
 	info(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			this._logFn.call(parent, [Date.now(), REQUEST_LOG_INFO, parent._nonce(), parent._workerId,
-				this._requestIdBuffer, data]);
+			const writer = createWriter(REQUEST_LOG_INFO, parent, this._requestIdBuffer);
+			this._logFn.call(parent, writer.json(data).done());
 		}
 		return this;
 	}
@@ -121,8 +134,8 @@ module.exports = class RequestLogger {
 	debug(data) {
 		const parent = this._parent;
 		if (parent._fd >= 0) {
-			if (!this._debugLogs) this._debugLogs = [];
-			this._debugLogs.push([Date.now(), data]);
+			const debugLogs = this._debugLogs || (this._debugLogs = []);
+			debugLogs.push([Date.now(), data]);
 		}
 		return this;
 	}
@@ -139,28 +152,54 @@ module.exports = class RequestLogger {
 	}
 };
 
-// If given an IPv4 address, an equivalant big-endian integer is returned.
-// If given an IPv6 address, an equivalant Buffer is returned, with any leading
-// zeroes omitted.
-function encodeIpAddress(ipAddressString) {
-	if (ipAddressString.includes(':')) {
-		const bytes = new Address6(ipAddressString).toUnsignedByteArray();
-		let offset = 0;
-		while (bytes[offset] === 0) offset += 1;
-		if (offset === 0) return Buffer.from(bytes);
-		return Buffer.from(bytes.slice(offset));
-	} else {
-		const bytes = new Address4(ipAddressString).toArray();
-		return bytes[0] * 0x1000000 +
-			(bytes[1] << 16 |
-			bytes[2] << 8 |
-			bytes[3]);
-	}
+function createWriter(eventType, parent, requestId) {
+	return new Writer()
+		.uint8(eventType)
+		.uint48(Date.now())
+		.uint16(parent._nonce())
+		.dynamicInteger(parent._workerId)
+		.bytes(requestId);
 }
 
-// Returns an integer corresponding to the given HTTP method. If an unrecognized
-// HTTP method was given, it is returned as-is (as a string).
-function encodeHttpMethod(method) {
-	const enumValue = HttpMethod[method];
-	return enumValue === undefined ? method : enumValue;
+function writeRequest(writer, req) {
+	const methodEnumValue = HttpMethod[req.method];
+	const isUnknownMethod = methodEnumValue === undefined;
+	const ipAddressString = req.socket.remoteAddress;
+	const isIPv6Address = ipAddressString.includes(':');
+	const flagByte = (req.httpVersionMajor & 0b111) << 3
+		| req.httpVersionMinor & 0b111
+		| (isIPv6Address ? 0b01000000 : 0)
+		| (isUnknownMethod ? 0b10000000 : 0);
+
+	writer.uint8(flagByte);
+
+	if (isIPv6Address) {
+		writer.bytes(encodeIPv6(ipAddressString));
+	} else {
+		writer.uint32(encodeIPv4(ipAddressString));
+	}
+
+	if (isUnknownMethod) {
+		writer.string(req.method);
+	} else {
+		writer.uint8(methodEnumValue);
+	}
+
+	writer.string(req.url);
+}
+
+function encodeIPv6(ipAddressString) {
+	const bytes = new Address6(ipAddressString).toUnsignedByteArray();
+	if (bytes.length === 16) return Buffer.from(bytes);
+	const buffer = Buffer.allocUnsafe(16).fill(0);
+	buffer.set(bytes, 16 - bytes.length);
+	return buffer;
+}
+
+function encodeIPv4(ipAddressString) {
+	const bytes = new Address4(ipAddressString).toArray();
+	return bytes[0] * 0x1000000 +
+		(bytes[1] << 16 |
+		bytes[2] << 8 |
+		bytes[3]);
 }
