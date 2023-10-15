@@ -1,27 +1,5 @@
 'use strict';
 
-exports.lastIndexOf = (haystack, needle, initialIndex = haystack.length - 1) => {
-	if (initialIndex < 0) {
-		return -1;
-	}
-
-	const lastIndex = needle.length - 1;
-	const lastByte = needle[lastIndex];
-	let index = haystack.lastIndexOf(lastByte, initialIndex + lastIndex);
-
-	search: while (index >= lastIndex) {
-		for (let i = 1; i <= lastIndex; ++i) {
-			if (haystack[index - i] !== needle[lastIndex - i]) {
-				index = haystack.lastIndexOf(lastByte, --index);
-				continue search;
-			}
-		}
-		return index - lastIndex;
-	}
-
-	return -1;
-};
-
 exports.indexOf = (haystack, needle, initialIndex = 0) => {
 	if (initialIndex < 0) {
 		initialIndex = 0;
@@ -39,6 +17,28 @@ exports.indexOf = (haystack, needle, initialIndex = 0) => {
 			}
 		}
 		return index;
+	}
+
+	return -1;
+};
+
+exports.lastIndexOf = (haystack, needle, initialIndex = haystack.length - 1) => {
+	if (initialIndex < 0) {
+		return -1;
+	}
+
+	const lastIndex = needle.length - 1;
+	const lastByte = needle[lastIndex];
+	let index = haystack.lastIndexOf(lastByte, initialIndex + lastIndex);
+
+	search: while (index >= lastIndex) {
+		for (let i = 1; i <= lastIndex; ++i) {
+			if (haystack[index - i] !== needle[lastIndex - i]) {
+				index = haystack.lastIndexOf(lastByte, --index);
+				continue search;
+			}
+		}
+		return index - lastIndex;
 	}
 
 	return -1;
