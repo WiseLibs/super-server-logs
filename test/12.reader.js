@@ -15,11 +15,13 @@ describe('Reader', function () {
 	describe('uint32()', function () {
 		it('reads an unsigned 32-bit integer');
 		it('advances the offset by 4 bytes');
+		it('works for integers that use all 32 bits');
 	});
 
 	describe('uint48()', function () {
 		it('reads an unsigned 48-bit integer');
 		it('advances the offset by 6 bytes');
+		it('works for integers that use all 48 bits');
 	});
 
 	describe('dynamicInteger()', function () {
@@ -27,6 +29,7 @@ describe('Reader', function () {
 		it('advances the offset by 1 byte if value <= 253');
 		it('advances the offset by 3 bytes if value <= 65535');
 		it('advances the offset by 5 bytes if value <= 4294967295');
+		it('works for integers that use all 32 bits');
 	});
 
 	describe('bytes()', function () {

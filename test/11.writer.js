@@ -15,11 +15,13 @@ describe('Writer', function () {
 	describe('uint32()', function () {
 		it('writes an unsigned 32-bit integer');
 		it('wraps the input integer if out of bounds');
+		it('works for integers that use all 32 bits');
 	});
 
 	describe('uint48()', function () {
 		it('writes an unsigned 48-bit integer');
 		it('wraps the input integer if out of bounds');
+		it('works for integers that use all 48 bits');
 	});
 
 	describe('dynamicInteger()', function () {
@@ -27,6 +29,7 @@ describe('Writer', function () {
 		it('writes a dynamic unsigned integer in 3 bytes if value <= 65535');
 		it('writes a dynamic unsigned integer in 5 bytes if value <= 4294967295');
 		it('wraps the input integer if out of bounds');
+		it('works for integers that use all 32 bits');
 	});
 
 	describe('bytes()', function () {
