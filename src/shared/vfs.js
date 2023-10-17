@@ -4,6 +4,7 @@ const BufferUtil = require('./buffer-util');
 
 const PAGE_SIZE = 1024 * 4;
 const DEFAULT_CACHE_SIZE = 1024 * 1024 * 16;
+const BYTE_SLICE = Uint8Array.prototype.slice;
 
 /*
 	Vfs ("virtual file source") is an abstract interface for reading raw chunks
@@ -136,7 +137,7 @@ module.exports = class Vfs {
 			throw new Error('Vfs object is closed');
 		}
 		if (byteLength === 0) {
-			return new Uint8Array();
+			return BufferUtil.alloc(0);
 		}
 
 		this._busy = true;
@@ -157,6 +158,8 @@ module.exports = class Vfs {
 				if (!(data instanceof Uint8Array)) {
 					throw new TypeError('Expected read() function to return a Uint8Array');
 				}
+
+				data = BufferUtil.normalize(data);
 
 				if (data.byteLength > readLength) {
 					data = data.subarray(0, readLength);
@@ -233,6 +236,8 @@ function createSaveToCache(cache, maxCacheSize) {
 			return;
 		}
 
+		data = BufferUtil.normalize(data);
+
 		// Add each page to cache (overwriting pages if they already exist).
 		// If the last page is incomplete, it will not be added to cache.
 		let pageNumber = Math.ceil(byteOffset / PAGE_SIZE);
@@ -243,7 +248,7 @@ function createSaveToCache(cache, maxCacheSize) {
 			}
 
 			pageNumbers.push(pageNumber);
-			cache.set(pageNumber++, new Uint8Array(data.subarray(offset - PAGE_SIZE, offset)));
+			cache.set(pageNumber++, BYTE_SLICE.call(data, offset - PAGE_SIZE, offset));
 			offset += PAGE_SIZE;
 		}
 

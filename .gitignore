@@ -2,6 +2,7 @@
 .env
 .log
 .logs
+.local
 log/
 logs/
 temp/

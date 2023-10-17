@@ -1,11 +1,7 @@
 'use strict';
+const BufferUtil = require('./buffer-util');
+
 const BYTE_SLICE = Uint8Array.prototype.slice;
-const BYTE_COPY = Buffer.prototype.copy; // TODO: not available in browsers
-const TO_STRING = Buffer.prototype.toString; // TODO: not available in browsers
-const POOL_SIZE = 1024 * 8;
-const MAX_POOL_SLICE_SIZE = POOL_SIZE / 4;
-let POOL = new ArrayBuffer(POOL_SIZE);
-let POOL_OFFSET = 0;
 
 /*
 	This class provides the low-level functions for reading binary-format logs.
@@ -17,7 +13,7 @@ module.exports = class Reader {
 			throw new TypeError('Expected input to be a Uint8Array');
 		}
 
-		this.input = input;
+		this.input = BufferUtil.normalize(input);
 		this.offset = 0;
 	}
 
@@ -78,19 +74,12 @@ module.exports = class Reader {
 			throw new RangeError('BUFFER_SHORTAGE');
 		}
 
-		if (byteLength <= MAX_POOL_SLICE_SIZE) {
-			if (POOL_OFFSET + byteLength > POOL_SIZE) {
-				POOL = new ArrayBuffer(POOL_SIZE);
-				POOL_OFFSET = 0;
-			}
-
-			const output = new Uint8Array(POOL, POOL_OFFSET, byteLength);
-			POOL_OFFSET += byteLength;
-			BYTE_COPY.call(input, output, 0, this.offset, this.offset += byteLength);
+		if (BufferUtil.isFastAllocation(byteLength)) {
+			const output = BufferUtil.alloc(byteLength);
+			BufferUtil.copy(input, output, 0, this.offset, this.offset += byteLength);
 			return output;
 		}
 
-		// TODO: BYTE_SLICE could return a Buffer, but it should always be a Uint8Array
 		return BYTE_SLICE.call(input, this.offset, this.offset += byteLength);
 	}
 
@@ -108,7 +97,7 @@ module.exports = class Reader {
 		if (byteLength <= 24) {
 			return readUtf8(input, this.offset, this.offset += byteLength);
 		} else {
-			return TO_STRING.call(input, 'utf8', this.offset, this.offset += byteLength);
+			return BufferUtil.toString(input, this.offset, this.offset += byteLength);
 		}
 	}
 

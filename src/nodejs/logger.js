@@ -1,6 +1,8 @@
 'use strict';
 const { openSync, closeSync, writevSync } = require('fs');
+const { normalize } = require('../shared/buffer-util');
 const { compress } = require('../shared/common');
+const { ESCAPE, SEPARATOR, ESCAPE_CODE_ESCAPE, ESCAPE_CODE_SEPARATOR } = require('../shared/common');
 
 /*
 	A generic logger that writes binary chunks to a file. It buffers its output
@@ -10,9 +12,8 @@ const { compress } = require('../shared/common');
 
 	Whenever a group of logs are flushed to disk, they are first concatenated
 	into a single block, then compressed (except when their total size is very
-	small), and then a trailer is appended to the end of the block, which serves
-	as a separator between blocks. Any separators that appear within a block are
-	escaped, although the need for that is rare in practice.
+	small), and then a separator byte is appended to the end of the block. Any
+	separators that appear within a block are escaped.
  */
 
 module.exports = class Logger {
@@ -57,7 +58,7 @@ module.exports = class Logger {
 			return this;
 		}
 
-		this._outgoing.push(data);
+		this._outgoing.push(normalize(data));
 		this._outgoingSize += data.byteLength;
 
 		if (this._outgoingSize >= this._highWaterMark || this._outputDelay === 0) {
@@ -122,25 +123,26 @@ module.exports = class Logger {
 	}
 };
 
-const ESCAPE = Buffer.from([0xc1, 0, 0xff, 0]);
-const SEPARATOR = Buffer.from([0xc1, 0, 0xfe, 0]);
-const TRAILER_UNCOMPRESSED = Buffer.concat([SEPARATOR, Buffer.from([0])]);
-const TRAILER_COMPRESSED = Buffer.concat([SEPARATOR, Buffer.from([1])]);
-const ESCAPED_ESCAPE = Buffer.concat([ESCAPE, Buffer.from([0])]);
-const ESCAPED_SEPARATOR = Buffer.concat([ESCAPE, Buffer.from([1])]);
-const MINIMUM_COMPRESSIBLE_SIZE = 128;
+const SEPARATOR_CHUNK = Buffer.from([SEPARATOR]);
+const ESCAPED_ESCAPE = Buffer.from([ESCAPE, ESCAPE_CODE_ESCAPE]);
+const ESCAPED_SEPARATOR = Buffer.from([ESCAPE, ESCAPE_CODE_SEPARATOR]);
+const COMPRESSION_THRESHOLD = 400;
 
 function flush() {
 	const outgoing = this._outgoing;
 	let block = outgoing.length > 1 ? Buffer.concat(outgoing) : outgoing[0];
-	let trailer = TRAILER_UNCOMPRESSED;
 
-	if (this._compression && block.byteLength >= MINIMUM_COMPRESSIBLE_SIZE) {
+	if (this._compression && (outgoing.length > 1 || block.byteLength >= COMPRESSION_THRESHOLD)) {
 		block = compress(block);
-		trailer = TRAILER_COMPRESSED;
+		// We swap the two 4-bit fields of the zlib header, thus ensuring that
+		// the block's first byte always has a 1 as its most significant bit.
+		// This is how parsers know the block is compressed; uncompressed blocks
+		// will never start with a 1 as the most significant bit, because there
+		// are no EventTypes > 127.
+		block[0] = block[0] >> 4 | (block[0] & 0xf) << 4;
 	}
 
-	writevSync(this._fd, [escapeBlock(block), trailer]);
+	writevSync(this._fd, [escapeBlock(block), SEPARATOR_CHUNK]);
 	this._outgoing = [];
 	this._outgoingSize = 0;
 
@@ -159,11 +161,11 @@ function escapeBlock(block) {
 		do {
 			if (indexOfSeparator < 0 || indexOfEscape >= 0 && indexOfEscape < indexOfSeparator) {
 				parts.push(block.subarray(offset, indexOfEscape), ESCAPED_ESCAPE);
-				offset = indexOfEscape + ESCAPE.byteLength;
+				offset = indexOfEscape + 1;
 				indexOfEscape = block.indexOf(ESCAPE, offset);
 			} else {
 				parts.push(block.subarray(offset, indexOfSeparator), ESCAPED_SEPARATOR);
-				offset = indexOfSeparator + SEPARATOR.byteLength;
+				offset = indexOfSeparator + 1;
 				indexOfSeparator = block.indexOf(SEPARATOR, offset);
 			}
 		} while (indexOfEscape >= 0 || indexOfSeparator >= 0);

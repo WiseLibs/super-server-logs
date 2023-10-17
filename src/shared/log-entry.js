@@ -80,7 +80,7 @@ module.exports = class LogEntry {
 				this.data = reader.string();
 				break;
 			case RESPONSE:
-				this.level = LogLevel.INFO
+				this.level = LogLevel.INFO;
 				this.type = LogType.RESPONSE;
 				this.workerId = reader.dynamicInteger();
 				this.requestId = reader.bytes(16);

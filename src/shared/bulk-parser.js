@@ -1,31 +1,29 @@
 'use strict';
 const BufferUtil = require('./buffer-util');
 const BlockParser = require('./block-parser');
-const { findNextSeparator, findPrevSeparator } = require('./common');
-const { TRAILER_LENGTH } = require('./constants');
+const { SEPARATOR } = require('./common');
 
 // Transforms a bulk stream into a stream of blocks.
 exports.read = async function* read(input) {
-	let outputBuffer = new Uint8Array();
+	let outputBuffer = BufferUtil.alloc(0);
 
 	for await (const data of input) {
-		// TODO: normalize 'data' (Buffer to Uint8Array)
 		if (!(data instanceof Uint8Array)) {
 			throw new TypeError('Expected data to be a Uint8Array');
 		}
 
 		if (outputBuffer.byteLength > 0) {
-			outputBuffer = BufferUtil.concat([outputBuffer, data]);
+			outputBuffer = BufferUtil.concat([outputBuffer, BufferUtil.normalize(data)]);
 		} else {
-			outputBuffer = data;
+			outputBuffer = BufferUtil.normalize(data);
 		}
 
 		let offset = 0;
 		for (;;) {
 			const prevOffset = offset;
-			const indexOfSeparator = findNextSeparator(outputBuffer, prevOffset);
+			const indexOfSeparator = BufferUtil.indexOf(outputBuffer, SEPARATOR, prevOffset);
 			if (indexOfSeparator >= 0) {
-				offset = indexOfSeparator + TRAILER_LENGTH;
+				offset = indexOfSeparator + 1;
 				yield outputBuffer.subarray(prevOffset, offset);
 			} else {
 				break;
@@ -41,17 +39,16 @@ exports.readReversed = async function* readReversed(input) {
 	const inputBuffer = [];
 	let inputBufferSize = 0;
 	let currentChunkSize = -1;
-	let outputBuffer = new Uint8Array();
+	let outputBuffer = BufferUtil.alloc(0);
 	let newChunks = [];
 	let isBlockBundary = false;
 
 	for await (const data of input) {
-		// TODO: normalize 'data' (Buffer to Uint8Array)
 		if (!(data instanceof Uint8Array)) {
 			throw new TypeError('Expected data to be a Uint8Array');
 		}
 
-		inputBuffer.push(data);
+		inputBuffer.push(BufferUtil.normalize(data));
 		inputBufferSize += data.byteLength;
 
 		for (;;) {
@@ -84,10 +81,10 @@ exports.readReversed = async function* readReversed(input) {
 			let offset = outputBuffer.byteLength;
 			for (;;) {
 				const prevOffset = offset;
-				const initialIndex = prevOffset - 1 - (isBlockBundary ? TRAILER_LENGTH : 0);
-				const indexOfSeparator = findPrevSeparator(outputBuffer, initialIndex);
+				const initialIndex = prevOffset - (isBlockBundary ? 2 : 1);
+				const indexOfSeparator = BufferUtil.lastIndexOf(outputBuffer, SEPARATOR, initialIndex);
 				if (indexOfSeparator >= 0) {
-					offset = indexOfSeparator + TRAILER_LENGTH;
+					offset = indexOfSeparator + 1;
 					if (isBlockBundary) {
 						yield outputBuffer.subarray(offset, prevOffset);
 					} else {

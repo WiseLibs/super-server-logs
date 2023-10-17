@@ -2,8 +2,7 @@
 const Vfs = require('./vfs');
 const BufferUtil = require('./buffer-util');
 const BlockParser = require('./block-parser');
-const { findNextSeparator, findPrevSeparator } = require('./common');
-const { TRAILER_LENGTH } = require('./constants');
+const { SEPARATOR } = require('./common');
 
 const PAGE_SIZE = Vfs.PAGE_SIZE * 8;
 
@@ -30,7 +29,7 @@ module.exports = class Scanner {
 		this._pageCount = Math.ceil(totalSize / PAGE_SIZE);
 
 		// Chunk state
-		this._chunk = new Uint8Array();
+		this._chunk = BufferUtil.alloc(0);
 		this._chunkOffset = 0;
 		this._chunkFromPageNumber = -1;
 		this._isBlockBundary = true;
@@ -94,9 +93,9 @@ module.exports = class Scanner {
 			const chunk = this._chunk;
 			const offset = this._chunkOffset;
 
-			const indexOfSeparator = findNextSeparator(chunk, offset);
+			const indexOfSeparator = BufferUtil.indexOf(chunk, SEPARATOR, offset);
 			if (indexOfSeparator >= 0) {
-				this._chunkOffset = indexOfSeparator + TRAILER_LENGTH;
+				this._chunkOffset = indexOfSeparator + 1;
 				if (this._isBlockBundary) {
 					const block = chunk.subarray(offset, this._chunkOffset);
 					this._enterBlock(block, offset);
@@ -156,11 +155,11 @@ module.exports = class Scanner {
 		for (;;) {
 			const chunk = this._chunk;
 			const offset = this._chunkOffset;
-			const initialIndex = offset - 1 - (this._isBlockBundary ? TRAILER_LENGTH : 0);
+			const initialIndex = offset - (this._isBlockBundary ? 2 : 1);
 
-			const indexOfSeparator = findPrevSeparator(chunk, initialIndex);
+			const indexOfSeparator = BufferUtil.lastIndexOf(chunk, SEPARATOR, initialIndex);
 			if (indexOfSeparator >= 0) {
-				this._chunkOffset = indexOfSeparator + TRAILER_LENGTH;
+				this._chunkOffset = indexOfSeparator + 1;
 				if (this._isBlockBundary) {
 					const block = chunk.subarray(this._chunkOffset, offset);
 					this._enterBlock(block, offset);

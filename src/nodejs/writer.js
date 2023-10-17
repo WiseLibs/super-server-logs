@@ -1,4 +1,6 @@
 'use strict';
+const { normalize } = require('../shared/buffer-util');
+
 const MIN_BUFFER_PREALLOC_SIZE = 1024 * 2;
 const MAX_BUFFER_PREALLOC_SIZE = 1024 * 64;
 
@@ -127,7 +129,7 @@ module.exports = class Writer {
 			return this;
 		}
 
-		this._write(data);
+		this._write(normalize(data));
 		return this;
 	}
 

@@ -3,6 +3,7 @@ const Vfs = require('./vfs');
 const Scanner = require('./scanner');
 const BoundFinder = require('./bound-finder');
 const binarySearch = require('./binary-search');
+const BufferUtil = require('./buffer-util');
 
 const PAGE_SIZE = Vfs.PAGE_SIZE * 8;
 
@@ -344,7 +345,7 @@ function sleep(ms) {
 
 function prependLength(chunk) {
 	const length = chunk.byteLength;
-	const result = new Uint8Array(length + 4);
+	const result = BufferUtil.alloc(length + 4);
 
 	result[0] = length >>> 24;
 	result[1] = length >>> 16;

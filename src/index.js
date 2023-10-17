@@ -1,4 +1,28 @@
 'use strict';
+const MAX_POOL_SLICE_SIZE = Buffer.poolSize >> 1;
+
+Object.assign(require('./shared/buffer-util'), {
+	isFastAllocation(byteLength) {
+		return byteLength <= MAX_POOL_SLICE_SIZE;
+	},
+	alloc(byteLength) {
+		return Buffer.allocUnsafe(byteLength);
+	},
+	from(values) {
+		return Buffer.from(values);
+	},
+	normalize(input) {
+		if (Buffer.isBuffer(input)) return input;
+		return Buffer.from(input.buffer, input.byteOffset, input.byteLength);
+	},
+	copy(input, output, outputOffset, inputBegin, inputEnd) {
+		input.copy(output, outputOffset, inputBegin, inputEnd);
+	},
+	toString(input, inputBegin, inputEnd) {
+		return input.toString('utf8', inputBegin, inputEnd);
+	},
+});
+
 Object.assign(require('./shared/common'), {
 	compress: require('zlib').deflateSync,
 	decompress: require('zlib').inflateSync,
