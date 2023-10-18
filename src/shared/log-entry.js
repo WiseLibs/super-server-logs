@@ -291,17 +291,17 @@ for (const [name, number] of Object.entries(Lifecycle)) {
 
 const LOG_LEVEL_TO_JSON = new Array(10).fill('');
 for (const [name, number] of Object.entries(LogLevel)) {
-	LOG_LEVEL_TO_JSON[number] = name.toLowerCase();
+	LOG_LEVEL_TO_JSON[number] = name;
 }
 
 const LOG_TYPE_TO_JSON = new Array(10).fill('');
 for (const [name, number] of Object.entries(LogType)) {
-	LOG_TYPE_TO_JSON[number] = name.toLowerCase();
+	LOG_TYPE_TO_JSON[number] = name;
 }
 
 const LIFECYCLE_TO_JSON = new Array(20).fill('');
 for (const [name, number] of Object.entries(Lifecycle)) {
-	LIFECYCLE_TO_JSON[number] = name.toLowerCase();
+	LIFECYCLE_TO_JSON[number] = name;
 }
 
 const HTTP_METHOD_TO_JSON = new Array(12).fill('');

@@ -11,7 +11,7 @@ exports.encode = (err, debugLogs) => {
 	if (err == null) {
 		value = String(err);
 	} else {
-		Object.assign(properties, err);
+		assignProperties(properties, err);
 
 		const { stack, message, name } = err;
 		if (typeof stack === 'string') {
@@ -47,3 +47,18 @@ exports.decode = ([type, value, properties, debugLogs]) => {
 
 	return result;
 };
+
+// Similar to Object.assign(), but array-index-like keys are ignored.
+function assignProperties(properties, source) {
+	if (typeof source === 'object' || typeof source === 'function') {
+		if (Array.isArray(source) || ArrayBuffer.isView(source)) {
+			for (const key of Object.keys(source)) {
+				if (!/^(?:0|[1-9][0-9]*)$/.test(key)) {
+					properties[key] = source[key];
+				}
+			}
+		} else {
+			Object.assign(properties, source);
+		}
+	}
+}
