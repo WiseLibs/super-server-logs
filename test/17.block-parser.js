@@ -1,8 +1,7 @@
 'use strict';
 const { LogEntry, LogType, LogLevel } = require('..');
 const { ESCAPE, SEPARATOR, ESCAPE_CODE_ESCAPE, ESCAPE_CODE_SEPARATOR } = require('../src/shared/common');
-const { compress } = require('../src/shared/common');
-const { escapeBlock } = require('../src/nodejs/common');
+const { compress, escapeBlock } = require('../src/shared/common');
 const BlockParser = require('../src/shared/block-parser');
 const EventTypes = require('../src/shared/event-types');
 const Writer = require('../src/nodejs/writer');

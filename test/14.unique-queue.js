@@ -21,6 +21,7 @@ describe('UniqueQueue', function () {
 	});
 
 	it('supports an arbitrary number of elements', function () {
+		this.slow(1000);
 		const queue = new UniqueQueue();
 		queue.push(123);
 		queue.push(456);

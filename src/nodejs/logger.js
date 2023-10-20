@@ -1,9 +1,7 @@
 'use strict';
 const { openSync, closeSync, writevSync } = require('fs');
 const { normalize } = require('../shared/buffer-util');
-const { compress } = require('../shared/common');
-const { SEPARATOR } = require('../shared/common');
-const { escapeBlock } = require('./common');
+const { compress, escapeBlock, SEPARATOR } = require('../shared/common');
 
 /*
 	A generic logger that writes binary chunks to a file. It buffers its output

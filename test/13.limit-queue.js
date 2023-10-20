@@ -21,6 +21,7 @@ describe('LimitQueue', function () {
 	});
 
 	it('supports an arbitrary number of elements', function () {
+		this.slow(1000);
 		const queue = new LimitQueue(80000);
 		queue.push(123);
 		queue.push(456);

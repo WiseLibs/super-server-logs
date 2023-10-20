@@ -2,8 +2,7 @@
 const Reader = require('./reader');
 const LogEntry = require('./log-entry');
 const BufferUtil = require('./buffer-util');
-const { decompress } = require('./common');
-const { ESCAPE, SEPARATOR, ESCAPE_CODE_ESCAPE, ESCAPE_CODE_SEPARATOR } = require('./common');
+const { decompress, unescapeBlock } = require('./common');
 
 exports.parseOne = (block) => {
 	if (!(block instanceof Uint8Array)) {
@@ -55,33 +54,6 @@ function unwrapBlock(block) {
 	if (block[0] & 0x80) {
 		block[0] = block[0] >> 4 | (block[0] & 0xf) << 4; // Restore zlib header
 		block = decompress(block);
-	}
-	return block;
-}
-
-const ESCAPE_CHUNK = BufferUtil.from([ESCAPE]);
-const SEPARATOR_CHUNK = BufferUtil.from([SEPARATOR]);
-
-function unescapeBlock(block) {
-	let indexOfEscape = BufferUtil.indexOf(block, ESCAPE);
-	if (indexOfEscape >= 0) {
-		let offset = 0;
-		const parts = [];
-		do {
-			parts.push(block.subarray(offset, indexOfEscape));
-			const escapeCode = block[indexOfEscape + 1];
-			if (escapeCode === ESCAPE_CODE_ESCAPE) {
-				parts.push(ESCAPE_CHUNK);
-			} else if (escapeCode === ESCAPE_CODE_SEPARATOR) {
-				parts.push(SEPARATOR_CHUNK);
-			} else {
-				throw new TypeError(`Unrecognized escape code: ${escapeCode}`);
-			}
-			offset = indexOfEscape + 2;
-			indexOfEscape = BufferUtil.indexOf(block, ESCAPE, offset);
-		} while (indexOfEscape >= 0);
-		parts.push(block.subarray(offset));
-		return BufferUtil.concat(parts);
 	}
 	return block;
 }

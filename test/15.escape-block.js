@@ -1,6 +1,6 @@
 'use strict';
 const { ESCAPE, SEPARATOR, ESCAPE_CODE_ESCAPE, ESCAPE_CODE_SEPARATOR } = require('../src/shared/common');
-const { escapeBlock } = require('../src/nodejs/common');
+const { escapeBlock } = require('../src/shared/common');
 
 describe('escapeBlock()', function () {
 	it('escapes all escape characters', function () {
@@ -18,8 +18,9 @@ describe('escapeBlock()', function () {
 			.to.deep.equal(new Uint8Array([10, 20, ESCAPE, ESCAPE_CODE_ESCAPE, 30, ESCAPE, ESCAPE_CODE_SEPARATOR, ESCAPE, ESCAPE_CODE_ESCAPE]));
 	});
 
-	it('should result in a block that does not contain separators', function () {
-		expect([...escapeBlock(new Uint8Array([10, 20, ESCAPE, 30, SEPARATOR, ESCAPE]))])
+	it('results in a block that does not contain separators', function () {
+		const everyByte = new Array(256).fill(0).map((_, i) => i);
+		expect([...escapeBlock(new Uint8Array(everyByte))])
 			.to.not.include(SEPARATOR);
 	});
 });
