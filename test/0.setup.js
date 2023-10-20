@@ -14,10 +14,10 @@ global.util = {
 };
 
 before(function () {
-	fs.rmSync(TEMP_DIR, { recursive: true, force: true });
+	fs.rmSync(TEMP_DIR, { recursive: true, force: true, maxRetries: 10 });
 	fs.mkdirSync(TEMP_DIR, { recursive: true });
 });
 
 after(function () {
-	fs.rmSync(TEMP_DIR, { recursive: true });
+	fs.rmSync(TEMP_DIR, { recursive: true, maxRetries: 10 });
 });
