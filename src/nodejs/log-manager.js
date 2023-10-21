@@ -59,6 +59,7 @@ module.exports = class LogManager extends EventEmitter {
 			throw new RangeError('Granularity is too large for the given logAgeLimit');
 		}
 
+		super();
 		this._dirname = null;
 		this._filename = null;
 		this._pollTimer = null;
@@ -85,6 +86,7 @@ module.exports = class LogManager extends EventEmitter {
 			this._pollTimer = null;
 			this._closed = true;
 		}
+		return this;
 	}
 
 	get closed() {

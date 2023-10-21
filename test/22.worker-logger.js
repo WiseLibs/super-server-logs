@@ -8,13 +8,14 @@ const Logger = require('../src/nodejs/logger');
 describe('WorkerLogger', function () {
 	const TIMESTAMP = 1697791340927;
 	const originalNow = Date.now;
+	let logger;
 
 	before(function () {
 		Date.now = () => TIMESTAMP;
 	});
 
 	afterEach(function () {
-		this.logger?.close();
+		logger?.close();
 	});
 
 	after(function () {
@@ -23,8 +24,8 @@ describe('WorkerLogger', function () {
 
 	describe('logging methods', function () {
 		specify('WORKER_STARTED() logs and flushes an event', async function () {
-			this.logger = new WorkerLogger(util.next(), { workerId: 23 });
-			expect(this.logger.WORKER_STARTED()).to.equal(this.logger);
+			logger = new WorkerLogger(util.next(), { workerId: 23 });
+			expect(logger.WORKER_STARTED()).to.equal(logger);
 			expect(new LogEntry(new Reader(fs.readFileSync(util.current())))).to.deep.equal({
 				timestamp: TIMESTAMP,
 				nonce: 0,
@@ -36,8 +37,8 @@ describe('WorkerLogger', function () {
 		});
 
 		specify('WORKER_GOING_ONLINE() logs and flushes an event', async function () {
-			this.logger = new WorkerLogger(util.next(), { workerId: 23 });
-			expect(this.logger.WORKER_GOING_ONLINE()).to.equal(this.logger);
+			logger = new WorkerLogger(util.next(), { workerId: 23 });
+			expect(logger.WORKER_GOING_ONLINE()).to.equal(logger);
 			expect(new LogEntry(new Reader(fs.readFileSync(util.current())))).to.deep.equal({
 				timestamp: TIMESTAMP,
 				nonce: 0,
@@ -49,8 +50,8 @@ describe('WorkerLogger', function () {
 		});
 
 		specify('WORKER_ONLINE() logs and flushes an event', async function () {
-			this.logger = new WorkerLogger(util.next(), { workerId: 23 });
-			expect(this.logger.WORKER_ONLINE()).to.equal(this.logger);
+			logger = new WorkerLogger(util.next(), { workerId: 23 });
+			expect(logger.WORKER_ONLINE()).to.equal(logger);
 			expect(new LogEntry(new Reader(fs.readFileSync(util.current())))).to.deep.equal({
 				timestamp: TIMESTAMP,
 				nonce: 0,
@@ -62,8 +63,8 @@ describe('WorkerLogger', function () {
 		});
 
 		specify('WORKER_GOING_OFFLINE() logs and flushes an event', async function () {
-			this.logger = new WorkerLogger(util.next(), { workerId: 23 });
-			expect(this.logger.WORKER_GOING_OFFLINE()).to.equal(this.logger);
+			logger = new WorkerLogger(util.next(), { workerId: 23 });
+			expect(logger.WORKER_GOING_OFFLINE()).to.equal(logger);
 			expect(new LogEntry(new Reader(fs.readFileSync(util.current())))).to.deep.equal({
 				timestamp: TIMESTAMP,
 				nonce: 0,
@@ -75,8 +76,8 @@ describe('WorkerLogger', function () {
 		});
 
 		specify('WORKER_OFFLINE() logs and flushes an event', async function () {
-			this.logger = new WorkerLogger(util.next(), { workerId: 23 });
-			expect(this.logger.WORKER_OFFLINE()).to.equal(this.logger);
+			logger = new WorkerLogger(util.next(), { workerId: 23 });
+			expect(logger.WORKER_OFFLINE()).to.equal(logger);
 			expect(new LogEntry(new Reader(fs.readFileSync(util.current())))).to.deep.equal({
 				timestamp: TIMESTAMP,
 				nonce: 0,
@@ -88,8 +89,8 @@ describe('WorkerLogger', function () {
 		});
 
 		specify('WORKER_DONE() logs and flushes an event', async function () {
-			this.logger = new WorkerLogger(util.next(), { workerId: 23 });
-			expect(this.logger.WORKER_STARTED()).to.equal(this.logger);
+			logger = new WorkerLogger(util.next(), { workerId: 23 });
+			expect(logger.WORKER_STARTED()).to.equal(logger);
 			expect(new LogEntry(new Reader(fs.readFileSync(util.current())))).to.deep.equal({
 				timestamp: TIMESTAMP,
 				nonce: 0,
@@ -103,8 +104,8 @@ describe('WorkerLogger', function () {
 		specify('UNCAUGHT_EXCEPTION() logs an event', async function () {
 			this.slow(400);
 			const err = Object.assign(new Error('lol'), { foo: 'bar' });
-			this.logger = new WorkerLogger(util.next(), { workerId: 23, outputDelay: 50, compression: false });
-			expect(this.logger.UNCAUGHT_EXCEPTION(err)).to.equal(this.logger);
+			logger = new WorkerLogger(util.next(), { workerId: 23, outputDelay: 50, compression: false });
+			expect(logger.UNCAUGHT_EXCEPTION(err)).to.equal(logger);
 			expect(fs.readFileSync(util.current())).to.deep.equal(new Uint8Array());
 			await new Promise(r => setTimeout(r, 60));
 			expect(new LogEntry(new Reader(fs.readFileSync(util.current())))).to.deep.equal({
@@ -119,8 +120,8 @@ describe('WorkerLogger', function () {
 
 		specify('critical() logs an event', async function () {
 			this.slow(400);
-			this.logger = new WorkerLogger(util.next(), { workerId: 23, outputDelay: 50 });
-			expect(this.logger.critical({ foo: 'bar' })).to.equal(this.logger);
+			logger = new WorkerLogger(util.next(), { workerId: 23, outputDelay: 50 });
+			expect(logger.critical({ foo: 'bar' })).to.equal(logger);
 			expect(fs.readFileSync(util.current())).to.deep.equal(new Uint8Array());
 			await new Promise(r => setTimeout(r, 60));
 			expect(new LogEntry(new Reader(fs.readFileSync(util.current())))).to.deep.equal({
@@ -136,8 +137,8 @@ describe('WorkerLogger', function () {
 
 		specify('error() logs an event', async function () {
 			this.slow(400);
-			this.logger = new WorkerLogger(util.next(), { workerId: 23, outputDelay: 50 });
-			expect(this.logger.error({ foo: 'bar' })).to.equal(this.logger);
+			logger = new WorkerLogger(util.next(), { workerId: 23, outputDelay: 50 });
+			expect(logger.error({ foo: 'bar' })).to.equal(logger);
 			expect(fs.readFileSync(util.current())).to.deep.equal(new Uint8Array());
 			await new Promise(r => setTimeout(r, 60));
 			expect(new LogEntry(new Reader(fs.readFileSync(util.current())))).to.deep.equal({
@@ -153,8 +154,8 @@ describe('WorkerLogger', function () {
 
 		specify('warn() logs an event', async function () {
 			this.slow(400);
-			this.logger = new WorkerLogger(util.next(), { workerId: 23, outputDelay: 50 });
-			expect(this.logger.warn({ foo: 'bar' })).to.equal(this.logger);
+			logger = new WorkerLogger(util.next(), { workerId: 23, outputDelay: 50 });
+			expect(logger.warn({ foo: 'bar' })).to.equal(logger);
 			expect(fs.readFileSync(util.current())).to.deep.equal(new Uint8Array());
 			await new Promise(r => setTimeout(r, 60));
 			expect(new LogEntry(new Reader(fs.readFileSync(util.current())))).to.deep.equal({
@@ -170,8 +171,8 @@ describe('WorkerLogger', function () {
 
 		specify('info() logs an event', async function () {
 			this.slow(400);
-			this.logger = new WorkerLogger(util.next(), { workerId: 23, outputDelay: 50 });
-			expect(this.logger.info({ foo: 'bar' })).to.equal(this.logger);
+			logger = new WorkerLogger(util.next(), { workerId: 23, outputDelay: 50 });
+			expect(logger.info({ foo: 'bar' })).to.equal(logger);
 			expect(fs.readFileSync(util.current())).to.deep.equal(new Uint8Array());
 			await new Promise(r => setTimeout(r, 60));
 			expect(new LogEntry(new Reader(fs.readFileSync(util.current())))).to.deep.equal({
@@ -188,12 +189,12 @@ describe('WorkerLogger', function () {
 		specify('debug() includes a log within the next UNCAUGHT_EXCEPTION', async function () {
 			this.slow(400);
 			const err = Object.assign(new Error('lol'), { foo: 'bar' });
-			this.logger = new WorkerLogger(util.next(), { workerId: 23, outputDelay: 50, compression: false, debugLogLimit: 2 });
-			expect(this.logger.debug({ lol: 'meh' })).to.equal(this.logger);
-			expect(this.logger.debug({ foo: 'bar' })).to.equal(this.logger);
-			expect(this.logger.debug({ baz: 'qux' })).to.equal(this.logger);
-			expect(this.logger.UNCAUGHT_EXCEPTION(err)).to.equal(this.logger);
-			expect(this.logger.UNCAUGHT_EXCEPTION(err)).to.equal(this.logger);
+			logger = new WorkerLogger(util.next(), { workerId: 23, outputDelay: 50, compression: false, debugLogLimit: 2 });
+			expect(logger.debug({ lol: 'meh' })).to.equal(logger);
+			expect(logger.debug({ foo: 'bar' })).to.equal(logger);
+			expect(logger.debug({ baz: 'qux' })).to.equal(logger);
+			expect(logger.UNCAUGHT_EXCEPTION(err)).to.equal(logger);
+			expect(logger.UNCAUGHT_EXCEPTION(err)).to.equal(logger);
 			expect(fs.readFileSync(util.current())).to.deep.equal(new Uint8Array());
 			await new Promise(r => setTimeout(r, 60));
 			const reader = new Reader(fs.readFileSync(util.current()));
@@ -222,10 +223,10 @@ describe('WorkerLogger', function () {
 	describe('pings', function () {
 		specify('are written periodically', async function () {
 			this.slow(400);
-			this.logger = new WorkerLogger(util.next(), { workerId: 23, pingDelay: 50, compression: false });
+			logger = new WorkerLogger(util.next(), { workerId: 23, pingDelay: 50, compression: false });
 			await new Promise(r => setTimeout(r, 130));
 			expect(fs.readFileSync(util.current())).to.deep.equal(new Uint8Array());
-			this.logger.flush();
+			logger.flush();
 			const reader = new Reader(fs.readFileSync(util.current()));
 			expect(new LogEntry(reader)).to.deep.equal({
 				timestamp: TIMESTAMP,
@@ -247,15 +248,15 @@ describe('WorkerLogger', function () {
 
 		specify('are not written if other logs are being written', async function () {
 			this.slow(400);
-			this.logger = new WorkerLogger(util.next(), { workerId: 23, pingDelay: 50, compression: false });
-			this.logger.info('hi');
+			logger = new WorkerLogger(util.next(), { workerId: 23, pingDelay: 50, compression: false });
+			logger.info('hi');
 			await new Promise(r => setTimeout(r, 20));
-			this.logger.info('hi');
+			logger.info('hi');
 			await new Promise(r => setTimeout(r, 20));
-			this.logger.info('hi');
+			logger.info('hi');
 			await new Promise(r => setTimeout(r, 20));
 			expect(fs.readFileSync(util.current())).to.deep.equal(new Uint8Array());
-			this.logger.flush();
+			logger.flush();
 			const reader = new Reader(fs.readFileSync(util.current()));
 			new LogEntry(reader);
 			new LogEntry(reader);
@@ -264,8 +265,8 @@ describe('WorkerLogger', function () {
 		});
 
 		specify('are written and flushed immediately after rotating to a new file', async function () {
-			this.logger = new WorkerLogger(util.next(), { workerId: 23 });
-			this.logger.rotate(util.next());
+			logger = new WorkerLogger(util.next(), { workerId: 23 });
+			logger.rotate(util.next());
 			const reader = new Reader(fs.readFileSync(util.current()));
 			expect(new LogEntry(reader)).to.deep.equal({
 				timestamp: TIMESTAMP,
@@ -279,31 +280,31 @@ describe('WorkerLogger', function () {
 
 		specify('are not written after the logger is closed', async function () {
 			this.slow(400);
-			this.logger = new WorkerLogger(util.next(), { workerId: 23, pingDelay: 50, compression: false });
-			this.logger.close();
+			logger = new WorkerLogger(util.next(), { workerId: 23, pingDelay: 50, compression: false });
+			logger.close();
 			await new Promise(r => setTimeout(r, 130));
-			this.logger.flush();
+			logger.flush();
 			expect(fs.readFileSync(util.current())).to.deep.equal(new Uint8Array());
 		});
 	});
 
 	describe('log()', function () {
 		it('always throws', async function () {
-			this.logger = new WorkerLogger(util.next(), { workerId: 23 });
-			expect(() => this.logger.log()).to.throw(TypeError, 'Private method');
-			expect(() => this.logger.log({ foo: 'bar' })).to.throw(TypeError, 'Private method');
-			expect(() => this.logger.log(new Uint8Array([10, 20]))).to.throw(TypeError, 'Private method');
+			logger = new WorkerLogger(util.next(), { workerId: 23 });
+			expect(() => logger.log()).to.throw(TypeError, 'Private method');
+			expect(() => logger.log({ foo: 'bar' })).to.throw(TypeError, 'Private method');
+			expect(() => logger.log(new Uint8Array([10, 20]))).to.throw(TypeError, 'Private method');
 		});
 	});
 
 	describe('newRequest()', function () {
 		it('returns a new RequestLogger', async function () {
-			this.logger = new WorkerLogger(util.next(), { workerId: 23 });
-			const requestLogge1 = this.logger.newRequest();
+			logger = new WorkerLogger(util.next(), { workerId: 23 });
+			const requestLogge1 = logger.newRequest();
 			expect(requestLogge1).to.be.an.instanceof(RequestLogger);
 			expect(requestLogge1.closed).to.be.false;
 			expect(requestLogge1.requestId).to.be.a('string');
-			const requestLogge2 = this.logger.newRequest();
+			const requestLogge2 = logger.newRequest();
 			expect(requestLogge2).to.be.an.instanceof(RequestLogger);
 			expect(requestLogge2.closed).to.be.false;
 			expect(requestLogge2.requestId).to.be.a('string');
@@ -363,113 +364,113 @@ describe('WorkerLogger', function () {
 
 	describe('disabled logging mode (null filename)', function () {
 		specify('WORKER_STARTED() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			expect(this.logger.WORKER_STARTED()).to.equal(this.logger);
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			expect(logger.WORKER_STARTED()).to.equal(logger);
 		});
 
 		specify('WORKER_GOING_ONLINE() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			expect(this.logger.WORKER_GOING_ONLINE()).to.equal(this.logger);
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			expect(logger.WORKER_GOING_ONLINE()).to.equal(logger);
 		});
 
 		specify('WORKER_ONLINE() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			expect(this.logger.WORKER_ONLINE()).to.equal(this.logger);
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			expect(logger.WORKER_ONLINE()).to.equal(logger);
 		});
 
 		specify('WORKER_GOING_OFFLINE() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			expect(this.logger.WORKER_GOING_OFFLINE()).to.equal(this.logger);
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			expect(logger.WORKER_GOING_OFFLINE()).to.equal(logger);
 		});
 
 		specify('WORKER_OFFLINE() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			expect(this.logger.WORKER_OFFLINE()).to.equal(this.logger);
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			expect(logger.WORKER_OFFLINE()).to.equal(logger);
 		});
 
 		specify('WORKER_DONE() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			expect(this.logger.WORKER_DONE()).to.equal(this.logger);
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			expect(logger.WORKER_DONE()).to.equal(logger);
 		});
 
 		specify('UNCAUGHT_EXCEPTION() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			expect(this.logger.UNCAUGHT_EXCEPTION(new Error('lol'))).to.equal(this.logger);
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			expect(logger.UNCAUGHT_EXCEPTION(new Error('lol'))).to.equal(logger);
 		});
 
 		specify('critical() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			expect(this.logger.critical({ foo: 'bar' })).to.equal(this.logger);
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			expect(logger.critical({ foo: 'bar' })).to.equal(logger);
 		});
 
 		specify('error() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			expect(this.logger.error({ foo: 'bar' })).to.equal(this.logger);
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			expect(logger.error({ foo: 'bar' })).to.equal(logger);
 		});
 
 		specify('warn() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			expect(this.logger.warn({ foo: 'bar' })).to.equal(this.logger);
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			expect(logger.warn({ foo: 'bar' })).to.equal(logger);
 		});
 
 		specify('info() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			expect(this.logger.info({ foo: 'bar' })).to.equal(this.logger);
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			expect(logger.info({ foo: 'bar' })).to.equal(logger);
 		});
 
 		specify('debug() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			expect(this.logger.debug({ foo: 'bar' })).to.equal(this.logger);
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			expect(logger.debug({ foo: 'bar' })).to.equal(logger);
 		});
 
 		specify('flush() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			this.logger.info({ foo: 'bar' });
-			this.logger.info({ baz: 'qux' });
-			expect(this.logger.flush()).to.equal(this.logger);
-			expect(this.logger.closed).to.be.true;
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			logger.info({ foo: 'bar' });
+			logger.info({ baz: 'qux' });
+			expect(logger.flush()).to.equal(logger);
+			expect(logger.closed).to.be.true;
 		});
 
 		specify('rotate() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			this.logger.info({ foo: 'bar' });
-			this.logger.info({ baz: 'qux' });
-			expect(this.logger.rotate(util.next())).to.equal(this.logger);
-			expect(this.logger.closed).to.be.true;
-			this.logger.info({ foo: 'bar' });
-			this.logger.info({ baz: 'qux' });
-			this.logger.flush();
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			logger.info({ foo: 'bar' });
+			logger.info({ baz: 'qux' });
+			expect(logger.rotate(util.next())).to.equal(logger);
+			expect(logger.closed).to.be.true;
+			logger.info({ foo: 'bar' });
+			logger.info({ baz: 'qux' });
+			logger.flush();
 			expect(fs.existsSync(util.current())).to.be.false;
 		});
 
 		specify('close() is a no-op', async function () {
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
-			expect(this.logger.closed).to.be.true;
-			expect(this.logger.close()).to.equal(this.logger);
-			expect(this.logger.closed).to.be.true;
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0 });
+			expect(logger.closed).to.be.true;
+			expect(logger.close()).to.equal(logger);
+			expect(logger.closed).to.be.true;
 		});
 
 		specify('pings are not written periodically', async function () {
 			this.slow(400);
-			this.logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0, pingDelay: 50 });
-			expect(this.logger.closed).to.be.true;
+			logger = new WorkerLogger(null, { workerId: 23, outputDelay: 0, pingDelay: 50 });
+			expect(logger.closed).to.be.true;
 			await new Promise(r => setTimeout(r, 130));
-			this.logger.flush();
-			expect(this.logger._pingTimer).to.be.null;
+			logger.flush();
+			expect(logger._pingTimer).to.be.null;
 		});
 	});
 });
