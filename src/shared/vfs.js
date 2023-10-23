@@ -70,13 +70,14 @@ module.exports = class Vfs {
 			throw new RangeError('Expected options.cacheSize to be non-negative');
 		}
 
+		const cacheContext = createCache(cacheSize);
+
 		this._read = read;
 		this._size = size;
 		this._setup = setup;
 		this._teardown = teardown;
-		this._maxCacheSize = cacheSize;
-		this._cache = new Map();
-		this._saveToCache = createSaveToCache(this._cache, this._maxCacheSize);
+		this._saveToCache = cacheContext.saveToCache;
+		this._readFromCache = cacheContext.readFromCache;
 		this._busy = false;
 		this._closed = true;
 	}
@@ -144,7 +145,7 @@ module.exports = class Vfs {
 		try {
 			const pageNumber = Math.floor(byteOffset / PAGE_SIZE);
 			const pageCount = Math.ceil((byteOffset + byteLength) / PAGE_SIZE) - pageNumber;
-			const { frontPages, backPages } = readFromCache(this._cache, pageNumber, pageCount);
+			const { frontPages, backPages } = this._readFromCache(pageNumber, pageCount);
 
 			let data;
 			if (frontPages.length === pageCount) {
@@ -167,7 +168,7 @@ module.exports = class Vfs {
 					throw new Error('Vfs data corruption detected');
 				}
 
-				data = BufferUtil.concat([...frontPages, data, ...backPages]);
+				data = BufferUtil.concat([...frontPages, data, ...backPages.reverse()]);
 			}
 
 			const trimBegin = byteOffset - pageNumber * PAGE_SIZE;
@@ -217,72 +218,80 @@ module.exports = class Vfs {
 	}
 };
 
-function createSaveToCache(cache, maxCacheSize) {
-	const maxCacheableSize = Math.floor(maxCacheSize / 4);
+function createCache(maxCacheSize) {
 	const pageNumbers = new UniqueQueue();
+	const cache = new Map();
 	let cacheSize = 0;
 
-	return (byteOffset, data) => {
-		if (!Number.isInteger(byteOffset)) {
-			throw new TypeError('Expected byte offset to be an integer');
-		}
-		if (byteOffset < 0) {
-			throw new RangeError('Expected byte offset to be non-negative');
-		}
-		if (!(data instanceof Uint8Array)) {
-			throw new TypeError('Expected data to be a Uint8Array');
-		}
-		if (data.byteLength < PAGE_SIZE || data.byteLength > maxCacheableSize) {
-			return;
-		}
-
-		data = BufferUtil.normalize(data);
-
-		// Add each page to cache (overwriting pages if they already exist).
-		// If the last page is incomplete, it will not be added to cache.
-		let pageNumber = Math.ceil(byteOffset / PAGE_SIZE);
-		let offset = pageNumber * PAGE_SIZE - byteOffset + PAGE_SIZE;
-		while (offset < data.byteLength) {
-			if (!pageNumbers.delete(pageNumber)) {
-				cacheSize += PAGE_SIZE;
+	return {
+		saveToCache(byteOffset, data) {
+			if (!Number.isInteger(byteOffset)) {
+				throw new TypeError('Expected byte offset to be an integer');
+			}
+			if (byteOffset < 0) {
+				throw new RangeError('Expected byte offset to be non-negative');
+			}
+			if (!(data instanceof Uint8Array)) {
+				throw new TypeError('Expected data to be a Uint8Array');
+			}
+			if (data.byteLength < PAGE_SIZE || data.byteLength > maxCacheSize) {
+				return;
 			}
 
-			pageNumbers.push(pageNumber);
-			cache.set(pageNumber++, BYTE_SLICE.call(data, offset - PAGE_SIZE, offset));
-			offset += PAGE_SIZE;
-		}
+			data = BufferUtil.normalize(data);
 
-		// If the cache is too big, delete the oldest pagest until it is not.
-		while (cacheSize > maxCacheSize) {
-			cache.delete(pageNumbers.shift());
-			cacheSize -= PAGE_SIZE;
-		}
-	};
-}
+			// Add each page to cache (overwriting pages if they already exist).
+			// If the last page is incomplete, it will not be added to cache.
+			let pageNumber = Math.ceil(byteOffset / PAGE_SIZE);
+			let offset = pageNumber * PAGE_SIZE - byteOffset + PAGE_SIZE;
+			while (offset <= data.byteLength) {
+				if (!pageNumbers.delete(pageNumber)) {
+					cacheSize += PAGE_SIZE;
+				}
 
-// Attempts to read the specified pages from cache. Pages are only read from the
-// beginning or end of the range, not the middle (i.e., it does not return
-// cached pages that would split up the requested range).
-function readFromCache(cache, pageNumber, pageCount) {
-	const frontPages = [];
-	const backPages = [];
-	if (cache.size) {
-		for (let i = 0; i < pageCount; ++i) {
-			const page = cache.get(pageNumber + i);
-			if (page) {
-				frontPages.push(page);
-			} else {
-				for (let j = pageCount - 1; j > i; --j) {
-					const page = cache.get(pageNumber + j);
+				pageNumbers.push(pageNumber);
+				cache.set(pageNumber++, BYTE_SLICE.call(data, offset - PAGE_SIZE, offset));
+				offset += PAGE_SIZE;
+			}
+
+			// If the cache is too big, delete the oldest pagest until it is not.
+			while (cacheSize > maxCacheSize) {
+				cache.delete(pageNumbers.shift());
+				cacheSize -= PAGE_SIZE;
+			}
+		},
+
+		// Attempts to read the specified pages from cache. Pages are only read
+		// from the beginning or end of the range, not the middle (i.e., it does
+		// not return cached pages that would split up the requested range).
+		readFromCache(firstPageNumber, pageCount) {
+			const frontPages = [];
+			const backPages = [];
+			if (cache.size) {
+				for (let i = 0; i < pageCount; ++i) {
+					const pageNumber = firstPageNumber + i;
+					const page = cache.get(pageNumber);
 					if (page) {
-						backPages.push(page);
+						pageNumbers.delete(pageNumber);
+						pageNumbers.push(pageNumber);
+						frontPages.push(page);
 					} else {
+						for (let j = pageCount - 1; j > i; --j) {
+							const pageNumber = firstPageNumber + j;
+							const page = cache.get(pageNumber);
+							if (page) {
+								pageNumbers.delete(pageNumber);
+								pageNumbers.push(pageNumber);
+								backPages.push(page);
+							} else {
+								break;
+							}
+						}
 						break;
 					}
 				}
-				break;
 			}
-		}
-	}
-	return { frontPages, backPages };
+			return { frontPages, backPages };
+		},
+	};
 }

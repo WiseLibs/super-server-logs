@@ -99,6 +99,7 @@ module.exports = class Scanner {
 				if (this._isBlockBundary) {
 					const block = chunk.subarray(offset, this._chunkOffset);
 					this._enterBlock(block, offset);
+					this._nextLogs.reverse();
 					yield* this._yieldLogs();
 				} else {
 					this._isBlockBundary = true;

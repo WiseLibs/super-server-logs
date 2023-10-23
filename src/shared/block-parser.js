@@ -52,8 +52,13 @@ function unwrapBlock(block) {
 	block = block.subarray(0, -1);
 	block = unescapeBlock(block);
 	if (block[0] & 0x80) {
+		const originalByte = block[0];
 		block[0] = block[0] >> 4 | (block[0] & 0xf) << 4; // Restore zlib header
-		block = decompress(block);
+		try {
+			return decompress(block);
+		} finally {
+			block[0] = originalByte; // Undo mutation
+		}
 	}
 	return block;
 }
