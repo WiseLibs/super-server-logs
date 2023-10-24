@@ -103,6 +103,8 @@ Most applications shouldn't have to worry about the `pingDelay` option. Internal
 
 ### Master logging methods
 
+The following methods write data to the log file. Each method is used for a particular purpose.
+
 - `masterLogger.STARTING_UP()`: This MUST be the first thing logged whenever a master process first starts up.
 - `masterLogger.STARTING_UP_COMPLETED()`: This SHOULD be logged after all workers have been spawned, and their HTTP servers have all been started.
 - `masterLogger.SHUTTING_DOWN()`: This SHOULD be logged when the master process wants to initiate a graceful shutdown procedure, but before any workers have been instructed to shut down.
@@ -153,6 +155,8 @@ The `highWaterMark` and `outputDelay` options control how logs are batched. If e
 
 ### Worker logging methods
 
+The following methods write data to the log file. Each method is used for a particular purpose.
+
 - `workerLogger.WORKER_STARTED()`: This SHOULD be logged when the worker process starts, before starting its HTTP server or performing its setup procedure (if any).
 - `workerLogger.WORKER_GOING_ONLINE()`: This SHOULD be logged after the worker process completes its setup procedure (if any), but before starting its HTTP server.
 - `workerLogger.WORKER_ONLINE()`: This SHOULD be logged when the worker process successfully starts its HTTP server.
@@ -195,6 +199,8 @@ Indicates whether or not the logger is closed.
 Whenever a worker process receives an HTTP request, you should use the [WorkerLogger][WorkerLogger] to spawn a new RequestLogger, and then use that RequestLogger for all request-related activity. Each HTTP request should have its own RequestLogger.
 
 ### Request logging methods
+
+The following methods write data to the log file. Each method is used for a particular purpose.
 
 - `requestLogger.REQUEST(req)`: This SHOULD be logged when the associated HTTP request is first received by the server. Only the request's "head" needs to be received; the request body may still be pending.
 - `requestLogger.REQUEST_META(data)`: This can be logged to associate arbitrary application-specific metadata to the request.
