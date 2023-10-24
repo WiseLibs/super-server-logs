@@ -15,14 +15,13 @@
 	- [`log.getHttpMethod()`](#loggethttpmethod)
 	- [`log.getError()`](#loggeterror)
 	- [`log.toJSON()`](#logtojson)
-- [namespace `BulkParser`](#class-bulkparser)
+- [namespace `BulkParser`](#namespace-bulkparser)
 	- [`BulkParser.read(chunks)`](#bulkparserreadchunks)
 	- [`BulkParser.readReversed(chunks)`](#bulkparserreadreversedchunks)
 	- [`BulkParser.parse(block)`](#bulkparserparseblock)
 - [class `LogDirectorySource`](#class-logdirectorysource)
 	- [`new LogDirectorySource(dirname[, options])`](#new-logdirectorysourcedirname-options)
 - [class `Vfs`](#class-vfs)
-	- [`new Vfs(options)`](#new-vfsoptions)
 - [enum `LogType`](#enum-logtype)
 - [enum `LogLevel`](#enum-loglevel)
 - [enum `Lifecycle`](#enum-lifecycle)
@@ -30,7 +29,7 @@
 
 # *class* LogReader
 
-This class is the primary interface used to read logs. Logs are stored in an efficient binary format, so they can't be read as plain text; parsing is required.
+This class is the primary interface used to read logs. Logs are stored in an efficient binary format, so they can't be read as plain text.
 
 LogReader supports two main ways of reading logs:
 
@@ -112,7 +111,7 @@ for await (const log of reader.rangeReversed(Date.now() - DAY, Date.now())) {
 
 Yields chunks of raw binary logs, such that the chunks include all logs with a timestamp greater than or equal to `minTimestamp`. Newly written chunks will be yielded indefinitely, until the returned [AsyncIterable][AsyncIterable] is stopped (i.e., by a `break` statement).
 
-All "bulk" methods (including this one) may include logs outside the specified timestamp bounds. The only guarantee is that no logs *within* bounds will be missing. The bulk methods provide an efficient way of piping logs to an external system (perhaps over a network). On the receiving end, [BulkParser][BulkParser] can be used to parse the raw chunks into [LogEntry][LogEntry]s.
+All "bulk" methods (including this one) may include logs outside the specified timestamp bounds. The only guarantee is that no logs *within* bounds will be missing. The bulk methods provide an efficient way of piping logs to an external system (perhaps over a network). On the receiving end, [BulkParser][BulkParser] can be used to parse the raw chunks into [LogEntrys][LogEntry].
 
 Logs are yielded in ascending order (older logs first).
 
@@ -132,7 +131,7 @@ for await (const chunk of reader.bulkTail()) {
 
 Yields chunks of raw binary logs, such that the chunks include all logs with a timestamp greater than or equal to `minTimestamp`, and less than or equal to `maxTimestamp`.
 
-All "bulk" methods (including this one) may include logs outside the specified timestamp bounds. The only guarantee is that no logs *within* bounds will be missing. The bulk methods provide an efficient way of piping logs to an external system (perhaps over a network). On the receiving end, [BulkParser][BulkParser] can be used to parse the raw chunks into [LogEntry][LogEntry]s.
+All "bulk" methods (including this one) may include logs outside the specified timestamp bounds. The only guarantee is that no logs *within* bounds will be missing. The bulk methods provide an efficient way of piping logs to an external system (perhaps over a network). On the receiving end, [BulkParser][BulkParser] can be used to parse the raw chunks into [LogEntrys][LogEntry].
 
 Logs are yielded in ascending order (older logs first).
 
@@ -169,10 +168,10 @@ for await (const chunk of reader.bulkRangeReversed(Date.now() - DAY, Date.now())
 This class represents individual log entries. Every LogEntry has the following properties:
 
 - `log.timestamp` [&lt;number&gt;][number] A millisecond unix timestamp indicating when the log was written.
-- `log.nonce` [&lt;number&gt;][number] An unsigned 16-bit integer. Logs can be uniquely identified by combining their `timestamp`, `nonce`, and `workerId`.
-- `log.level` [&lt;number&gt;][number] The log level. Possible values are defined by the [LogLevel](#enum-loglevel) enum.
 - `log.type` [&lt;number&gt;][number] The log type. Possible values are defined by the [LogType](#enum-logtype) enum.
+- `log.level` [&lt;number&gt;][number] The log level. Possible values are defined by the [LogLevel](#enum-loglevel) enum.
 - `log.workerId`: [&lt;number&gt;][number] | [&lt;null&gt;][null] The ID of the worker that wrote this log. A value of `null` indicates that it was written by the master process of the [server cluster](https://nodejs.org/api/cluster.html).
+- `log.nonce` [&lt;number&gt;][number] An unsigned 16-bit integer. Logs can be uniquely identified by combining their `timestamp`, `nonce`, and `workerId`.
 
 Additional properties depend on the log's [type](#enum-logtype):
 
@@ -253,7 +252,7 @@ Returns a JSON-compatible representation of the LogEntry.
 - `chunks` [&lt;AsyncIterable][AsyncIterable][&lt;Buffer&gt;][Buffer][&gt;][AsyncIterable] A "bulk" stream of raw binary logs.
 - Returns: [&lt;AsyncIterable][AsyncIterable][&lt;Buffer&gt;][Buffer][&gt;][AsyncIterable]
 
-Given an [AsyncIterable][AsyncIterable] containing chunks of raw binary logs (such as one returned by [`reader.bulkTail()`](#readerbulktailmintimestamp-options) or [`reader.bulkRange()`](#readerbulkrangemintimestamp-maxtimestamp)), this returns an [AsyncIterable][AsyncIterable] that yields well-formed "log blocks". These blocks can subsequently be parsed by [`BulkParser.parse(block)`](#bulkparserparseblock) to extract the [LogEntry][LogEntry]s.
+Given an [AsyncIterable][AsyncIterable] containing chunks of raw binary logs (such as one returned by [`reader.bulkTail()`](#readerbulktailmintimestamp-options) or [`reader.bulkRange()`](#readerbulkrangemintimestamp-maxtimestamp)), this returns an [AsyncIterable][AsyncIterable] that yields well-formed "log blocks". These blocks can subsequently be parsed by [`BulkParser.parse(block)`](#bulkparserparseblock) to extract the [LogEntrys][LogEntry].
 
 ```js
 for await (const block of BulkParser.read(rawChunks)) {
@@ -268,7 +267,7 @@ for await (const block of BulkParser.read(rawChunks)) {
 - `chunks` [&lt;AsyncIterable][AsyncIterable][&lt;Buffer&gt;][Buffer][&gt;][AsyncIterable] A reverse "bulk" stream of raw binary logs.
 - Returns: [&lt;AsyncIterable][AsyncIterable][&lt;Buffer&gt;][Buffer][&gt;][AsyncIterable]
 
-Given an [AsyncIterable][AsyncIterable] containing reverse-order chunks of raw binary logs (such as one returned by [`reader.bulkRangeReversed()`](#readerbulktailmintimestamp-options)), this returns an [AsyncIterable][AsyncIterable] that yields well-formed "log blocks". These blocks can subsequently be parsed by [`BulkParser.parse(block)`](#bulkparserparseblock) to extract the [LogEntry][LogEntry]s.
+Given an [AsyncIterable][AsyncIterable] containing reverse-order chunks of raw binary logs (such as one returned by [`reader.bulkRangeReversed()`](#readerbulktailmintimestamp-options)), this returns an [AsyncIterable][AsyncIterable] that yields well-formed "log blocks". These blocks can subsequently be parsed by [`BulkParser.parse(block)`](#bulkparserparseblock) to extract the [LogEntrys][LogEntry].
 
 ```js
 for await (const block of BulkParser.readReversed(rawChunks)) {
@@ -400,7 +399,7 @@ All logs that have `log.type === LogType.LIFECYCLE` additionally have an `event`
 [Iterable]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_iterable_protocol
 [AsyncIterable]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for-await...of
 [Buffer]: https://nodejs.org/api/buffer.html#class-buffer
-[BulkParser]: #class-bulkparser
+[BulkParser]: #namespace-bulkparser
 [LogEntry]: #class-logentry
 [LogDirectorySource]: #class-logdirectorysource
 [Vfs]: #class-vfs
