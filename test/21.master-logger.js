@@ -264,14 +264,14 @@ describe('MasterLogger', function () {
 		});
 
 		specify('are written periodically even if other logs are written', async function () {
-			this.slow(400);
-			logger = new MasterLogger(util.next(), { pingDelay: 50, compression: false });
+			this.slow(500);
+			logger = new MasterLogger(util.next(), { pingDelay: 100, compression: false });
 			logger.info('hi');
-			await new Promise(r => setTimeout(r, 20));
+			await new Promise(r => setTimeout(r, 30));
 			logger.info('hi');
-			await new Promise(r => setTimeout(r, 20));
+			await new Promise(r => setTimeout(r, 30));
 			logger.info('hi');
-			await new Promise(r => setTimeout(r, 20));
+			await new Promise(r => setTimeout(r, 70));
 			expect(fs.readFileSync(util.current())).to.deep.equal(new Uint8Array());
 			logger.flush();
 			const reader = new Reader(fs.readFileSync(util.current()));

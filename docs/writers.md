@@ -28,7 +28,7 @@
 	- [`requestLogger.closed`](#requestloggerclosed)
 	- [`requestLogger.requestId`](#requestloggerrequestid)
 
-# *class* LogManager
+## *class* LogManager
 
 This class faciliates log rotation. It should be used within the master process of your [server cluster](https://nodejs.org/api/cluster.html). It keeps track of log files within a directory, detects when the log files get too big or too old, and deletes the oldest files when necessary. It also provides the filenames that your loggers should write to.
 
@@ -81,7 +81,7 @@ The file path of the log directory being managed.
 
 The file path of the current log file that all loggers should be writing to.
 
-# *class* MasterLogger
+## *class* MasterLogger
 
 This is the logger used by the [server cluster's](https://nodejs.org/api/cluster.html) master process. It internally maintains state that is necessary for writing well-formed logs, so only one instance should be used for the entire lifespan of the master process.
 
@@ -136,7 +136,7 @@ Closes the logger, flushing any remaining logs to the filesystem. This happens s
 
 Indicates whether or not the logger is closed.
 
-# *class* WorkerLogger
+## *class* WorkerLogger
 
 This is the logger used by each worker process within a [server cluster](https://nodejs.org/api/cluster.html). Each worker process should only have one WorkerLogger.
 
@@ -194,7 +194,7 @@ Closes the logger, flushing any remaining logs to the filesystem. This happens s
 
 Indicates whether or not the logger is closed.
 
-# *class* RequestLogger
+## *class* RequestLogger
 
 Whenever a worker process receives an HTTP request, you should use the [WorkerLogger][WorkerLogger] to spawn a new RequestLogger, and then use that RequestLogger for all request-related activity. Each HTTP request should have its own associated RequestLogger.
 
