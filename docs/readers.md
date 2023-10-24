@@ -30,7 +30,7 @@
 
 # *class* LogReader
 
-This class is the primary interface used to read logs. Logs are stored in an efficient binary format, so they can't be read directly by humans.
+This class is the primary interface used to read logs. Logs are stored in an efficient binary format, so they can't be read as plain text; parsing is required.
 
 LogReader supports two main ways of reading logs:
 

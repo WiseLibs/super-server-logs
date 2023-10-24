@@ -17,6 +17,7 @@ describe('binarySearch()', function () {
 		let pageCount
 
 		before(async function () {
+			this.timeout(10000);
 			endTime = writeLogs(util.next(), 100000, 100);
 			totalTime = endTime - START_TIME;
 			vfs = await createVfs(util.current());

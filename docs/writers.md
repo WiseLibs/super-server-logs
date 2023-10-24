@@ -103,7 +103,7 @@ Most applications shouldn't have to worry about the `pingDelay` option. Internal
 
 ### Master logging methods
 
-The following methods write data to the log file. Each method is used for a particular purpose.
+The following methods each write data to the log file. Each method is used for a particular purpose.
 
 - `masterLogger.STARTING_UP()`: This MUST be the first thing logged whenever a master process first starts up.
 - `masterLogger.STARTING_UP_COMPLETED()`: This SHOULD be logged after all workers have been spawned, and their HTTP servers have all been started.
@@ -155,7 +155,7 @@ The `highWaterMark` and `outputDelay` options control how logs are batched. If e
 
 ### Worker logging methods
 
-The following methods write data to the log file. Each method is used for a particular purpose.
+The following methods each write data to the log file. Each method is used for a particular purpose.
 
 - `workerLogger.WORKER_STARTED()`: This SHOULD be logged when the worker process starts, before starting its HTTP server or performing its setup procedure (if any).
 - `workerLogger.WORKER_GOING_ONLINE()`: This SHOULD be logged after the worker process completes its setup procedure (if any), but before starting its HTTP server.
@@ -196,16 +196,16 @@ Indicates whether or not the logger is closed.
 
 # *class* RequestLogger
 
-Whenever a worker process receives an HTTP request, you should use the [WorkerLogger][WorkerLogger] to spawn a new RequestLogger, and then use that RequestLogger for all request-related activity. Each HTTP request should have its own RequestLogger.
+Whenever a worker process receives an HTTP request, you should use the [WorkerLogger][WorkerLogger] to spawn a new RequestLogger, and then use that RequestLogger for all request-related activity. Each HTTP request should have its own associated RequestLogger.
 
 ### Request logging methods
 
-The following methods write data to the log file. Each method is used for a particular purpose.
+The following methods each write data to the log file. Each method is used for a particular purpose.
 
 - `requestLogger.REQUEST(req)`: This SHOULD be logged when the associated HTTP request is first received by the server. Only the request's "head" needs to be received; the request body may still be pending.
 - `requestLogger.REQUEST_META(data)`: This can be logged to associate arbitrary application-specific metadata to the request.
 - `requestLogger.RESPONSE(statusCode[, error])`: This SHOULD be logged when a response is sent for the associated HTTP request. Only the response's "head" needs to be sent; the response body may still be pending. Passing an `error` indicates that an unexpected error occurred while trying to handle the request.
-- `requestLogger.RESPONSE_FINISHED([error])`: This SHOULD be logged when the response body is done being sent (even if the response body was empty). Passing an `error` indicates that an unexpected error occurred while trying to send the response body, but after the response's "head" was already sent.
+- `requestLogger.RESPONSE_FINISHED([error])`: This SHOULD be logged when the response body is done being sent (even if the response body was empty). Passing an `error` indicates that an unexpected error occurred while trying to send the response body, after the response's "head" was already sent.
 - `requestLogger.critical(data)`: This writes a CRITICAL-level log.
 - `requestLogger.error(data)`: This writes an ERROR-level log.
 - `requestLogger.warn(data)`: This writes a WARN-level log.
