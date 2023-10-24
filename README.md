@@ -14,7 +14,7 @@ On the writing side, here are its notable features:
 
 On the reading side, here are its notable features:
 
-* **Built-in binary search**, for quickly searching billions of logs in milliseconds; find logs within a certain time range
+* **Built-in binary search**; search billions of logs in milliseconds; find logs within a certain time range
 * **Built-in log tailing**, for reading/parsing new logs as they are written
 * **High-throughput "bulk" reading**, for efficiently piping logs within a certain time range to external systems
 * **Browser support** for all read-based APIs
