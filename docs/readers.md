@@ -173,34 +173,34 @@ This class represents individual log entries. Every LogEntry has the following p
 - `log.workerId`: [&lt;number&gt;][number] | [&lt;null&gt;][null] The ID of the worker that wrote this log. A value of `null` indicates that it was written by the master process of the [server cluster](https://nodejs.org/api/cluster.html).
 - `log.nonce` [&lt;number&gt;][number] An unsigned 16-bit integer. Logs can be uniquely identified by combining their `timestamp`, `nonce`, and `workerId`.
 
-Additional properties depend on the log's [type](#enum-logtype):
+Additional properties depending on the log's type:
 
-- `log.type === LogType.REQUEST`:
-	- `log.requestId` [&lt;Buffer&gt;][Buffer] A 16-byte [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)) used to uniquely identify an HTTP request.
+- `LogType.REQUEST`:
+	- `log.requestId` [&lt;Buffer&gt;][Buffer] A 16-byte [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)) used to uniquely identify the HTTP request.
 	- `log.httpVersionMajor` [&lt;number&gt;][number] The first integer of the request's HTTP version.
 	- `log.httpVersionMinor` [&lt;number&gt;][number] The second integer of the request's HTTP version.
 	- `log.ipAddress` [&lt;number&gt;][number] | [&lt;Buffer&gt;][Buffer] Either the [IPv4 address](https://en.wikipedia.org/wiki/Internet_Protocol_version_4) as an unsigned 32-bit integer, or the [IPv6 address](https://en.wikipedia.org/wiki/IPv6) as a 16-byte [&lt;Buffer&gt;][Buffer].
 	- `log.method` [&lt;number&gt;][number] | [&lt;string&gt;][string] Either a well-known HTTP method defined by the [HttpMethod](#enum-httpmethod) enum, or an unrecognized HTTP method as a literal string.
 	- `log.url` [&lt;string&gt;][string] The URL that was sent in the request's header ([`req.url`](https://nodejs.org/api/http.html#messageurl)).
-- `log.type === LogType.REQUEST_META`:
-	- `log.requestId` [&lt;Buffer&gt;][Buffer] A 16-byte [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)) used to uniquely identify an HTTP request.
-	- `log.data` [&lt;string&gt;][string] Application-specific metadata that was associated with a request, stored as stringified JSON.
-- `log.type === LogType.RESPONSE`:
-	- `log.requestId` [&lt;Buffer&gt;][Buffer] A 16-byte [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)) used to uniquely identify an HTTP request.
+- `LogType.REQUEST_META`:
+	- `log.requestId` [&lt;Buffer&gt;][Buffer] A 16-byte [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)) used to uniquely identify the HTTP request.
+	- `log.data` [&lt;string&gt;][string] Application-specific metadata that was associated with the request, stored as stringified JSON.
+- `LogType.RESPONSE`:
+	- `log.requestId` [&lt;Buffer&gt;][Buffer] A 16-byte [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)) used to uniquely identify the HTTP request.
 	- `log.statusCode` [&lt;number&gt;][number] The status code used to respond to the request.
 	- `log.error` [&lt;string&gt;][string] | [&lt;null&gt;][null] Details describing an exception that occured while trying to handle the request. To get a human-readable version, use [`log.getError()`](#loggeterror).
-- `log.type === LogType.RESPONSE_FINISHED`:
-	- `log.requestId` [&lt;Buffer&gt;][Buffer] A 16-byte [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)) used to uniquely identify an HTTP request.
-	- `log.error` [&lt;string&gt;][string] | [&lt;null&gt;][null] Details describing an exception that occured after responding to a request, but before the response stream was finished. To get a human-readable version, use [`log.getError()`](#loggeterror).
-- `log.type === LogType.LOG`:
-	- `log.requestId` [&lt;Buffer&gt;][Buffer] | [&lt;null&gt;][null] A 16-byte [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)) used to uniquely identify an HTTP request. A value of `null` is used for logs that are not associated with a request.
+- `LogType.RESPONSE_FINISHED`:
+	- `log.requestId` [&lt;Buffer&gt;][Buffer] A 16-byte [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)) used to uniquely identify the HTTP request.
+	- `log.error` [&lt;string&gt;][string] | [&lt;null&gt;][null] Details describing an exception that occured after responding to the request, but before the response stream was finished. To get a human-readable version, use [`log.getError()`](#loggeterror).
+- `LogType.LOG`:
+	- `log.requestId` [&lt;Buffer&gt;][Buffer] | [&lt;null&gt;][null] A 16-byte [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)) used to uniquely identify the HTTP request. A value of `null` is used for logs that are not associated with a request.
 	- `log.data` [&lt;string&gt;][string] The logged data, stored as stringified JSON.
-- `log.type === LogType.LIFECYCLE`:
+- `LogType.LIFECYCLE`:
 	- `log.event` [&lt;number&gt;][number] The type of lifecycle event that occured. Possible values are defined by the [Lifecycle](#enum-lifecycle) enum.
 	- Additional properties for `log.event === Lifecycle.WORKER_EXITED`:
 		- `log.exitCode` [&lt;number&gt;][number] The exit code of the worker process.
 		- `log.signal` [&lt;string&gt;][string] | [&lt;null&gt;][null] The POSIX signal that terminated the worker process (if any).
-- `log.type === LogType.UNCAUGHT_EXCEPTION`:
+- `LogType.UNCAUGHT_EXCEPTION`:
 	- `log.error` [&lt;string&gt;][string] Details describing an uncaught exception that occured within the process. To get a human-readable version, use [`log.getError()`](#loggeterror).
 
 ### log.getRequestId()
@@ -267,7 +267,7 @@ for await (const block of BulkParser.read(rawChunks)) {
 - `chunks` [&lt;AsyncIterable][AsyncIterable][&lt;Buffer&gt;][Buffer][&gt;][AsyncIterable] A reverse "bulk" stream of raw binary logs.
 - Returns: [&lt;AsyncIterable][AsyncIterable][&lt;Buffer&gt;][Buffer][&gt;][AsyncIterable]
 
-Given an [AsyncIterable][AsyncIterable] containing reverse-order chunks of raw binary logs (such as one returned by [`reader.bulkRangeReversed()`](#readerbulktailmintimestamp-options)), this returns an [AsyncIterable][AsyncIterable] that yields well-formed "log blocks". These blocks can subsequently be parsed by [`BulkParser.parse(block)`](#bulkparserparseblock) to extract the [LogEntrys][LogEntry].
+Given an [AsyncIterable][AsyncIterable] containing reverse-order chunks of raw binary logs (such as one returned by [`reader.bulkRangeReversed()`](#readerbulkrangereversedmintimestamp-maxtimestamp)), this returns an [AsyncIterable][AsyncIterable] that yields well-formed "log blocks". These blocks can subsequently be parsed by [`BulkParser.parse(block)`](#bulkparserparseblock) to extract the [LogEntrys][LogEntry].
 
 ```js
 for await (const block of BulkParser.readReversed(rawChunks)) {
@@ -301,9 +301,9 @@ Every [LogReader](#class-logreader) needs a source from which to read logs. The 
 - `dirname` [&lt;string&gt;][string] The path of the log directory.
 - `options` [&lt;Object&gt;][Object]
 	- `cacheSize` [&lt;number&gt;][number] The maximum amount of filesystem data (in bytes) to cache in memory at any given time. **Default:** `16777216` (16 MiB).
-	- `pollInterval` [&lt;number&gt;][number] | [&lt;null&gt;][null] The delay, in milliseconds, between each poll to the filesystem. This controls how frequently new logs can be detected. **Default:** `null`.
+	- `pollInterval` [&lt;number&gt;][number] | [&lt;null&gt;][null] The delay, in milliseconds, between each poll to the filesystem. This controls how frequently new logs can be detected. **Default:** `null` (never).
 	- `lazy` [&lt;boolean&gt;][boolean] If `true`, files are only kept open while they are being actively read. **Default:** `false`.
-	- `immutable` [&lt;boolean&gt;][boolean] If `true`, some optimizations will be enabled. Only use this if no live server is writing to the logs. **Default:** `false`.
+	- `immutable` [&lt;boolean&gt;][boolean] If `true`, some optimizations will be enabled. This is only safe if no live server is writing to the logs. **Default:** `false`.
 
 By default, logs are read from a single snapshot in time. To support tailing, the `pollInterval` option must be set, which allows the LogDirectorySource to periodically detect new logs being written.
 
@@ -327,7 +327,7 @@ for await (const log of reader.tail(Date.now())) {
 
 Instead of using [LogDirectorySource][LogDirectorySource], you can read logs from any arbitrary source by creating your own implementation of Vfs. For example, this could allow you to read raw binary logs in a browser.
 
-To learn how to implement a Vfs, see the [source code]('../src/shared/vfs.js').
+To learn how to implement a Vfs, see the [source code](../src/shared/vfs.js).
 
 # *enum* LogType
 
