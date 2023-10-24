@@ -16,7 +16,7 @@ const { compress, escapeBlock, SEPARATOR } = require('../shared/common');
  */
 
 module.exports = class Logger {
-	constructor(filename, { highWaterMark = 1024 * 32, outputDelay = 100, compression = true } = {}) {
+	constructor(filename, { highWaterMark = 1024 * 32, outputDelay = 200, compression = true } = {}) {
 		if (typeof filename !== 'string' && filename !== null) {
 			throw new TypeError('Expected filename to be a string or null');
 		}
