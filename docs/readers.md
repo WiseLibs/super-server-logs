@@ -363,7 +363,7 @@ All logs that have `log.type === LogType.LIFECYCLE` additionally have an `event`
 - `Lifecycle.STARTING_UP_COMPLETED`: The master process has finished starting up, and all workers have started their HTTP servers successfully.
 - `Lifecycle.SHUTTING_DOWN`: The master process is shutting down, and will soon instruct all workers to gracefully shut down.
 - `Lifecycle.WORKER_GOING_OFFLINE`: A worker process is about to gracefully shut down its HTTP server.
-- `Lifecycle.WORKER_OFFLINE`: A worker process has gracefully shut down its HTTP server, and is about to perform its teardown procedure.
+- `Lifecycle.WORKER_OFFLINE`: A worker process has shut down its HTTP server, and is about to perform its teardown procedure.
 - `Lifecycle.WORKER_DONE`: A worker process has finished its teardown procedure.
 - `Lifecycle.WORKER_EXITED`: The master process has detected that a worker process exited.
 - `Lifecycle.SHUTTING_DOWN_COMPLETED`: The master process has finished shutting down, and all workers have exited.

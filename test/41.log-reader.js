@@ -59,15 +59,23 @@ describe('LogReader', function () {
 			const minTime = context.currentTime - 100;
 			const timestamps = [];
 			let lastTimestamp = NaN;
+			let lastTimestampRead = NaN;
 			await new Promise((resolve, reject) => {
 				new Promise(r => setTimeout(r, 20))
 					.then(() => writeLogs(context, 500))
-					.then(() => { lastTimestamp = context.currentTime - 1 }, reject);
+					.then(() => {
+						lastTimestamp = context.currentTime - 1;
+						if (lastTimestampRead === lastTimestamp) {
+							setTimeout(resolve, 1000);
+						}
+					})
+					.catch(reject);
 
 				Promise.resolve().then(async () => {
 					for await (const log of reader.tail(minTime, { pollInterval: 10 })) {
 						timestamps.push(log.timestamp);
 						if (log.timestamp === lastTimestamp) break;
+						lastTimestampRead = log.timestamp;
 					}
 				}).then(resolve, reject);
 			});
@@ -393,10 +401,17 @@ describe('LogReader', function () {
 			const minTime = context.currentTime - 100;
 			const timestamps = [];
 			let lastTimestamp = NaN;
+			let lastTimestampRead = NaN;
 			await new Promise((resolve, reject) => {
 				new Promise(r => setTimeout(r, 20))
 					.then(() => writeLogs(context, 500))
-					.then(() => { lastTimestamp = context.currentTime - 1 }, reject);
+					.then(() => {
+						lastTimestamp = context.currentTime - 1;
+						if (lastTimestampRead === lastTimestamp) {
+							setTimeout(resolve, 1000);
+						}
+					})
+					.catch(reject);
 
 				Promise.resolve().then(async () => {
 					for await (const block of BulkParser.read(reader.bulkTail(minTime, { pollInterval: 10 }))) {
@@ -404,6 +419,7 @@ describe('LogReader', function () {
 						for (const log of BulkParser.parse(block)) {
 							timestamps.push(log.timestamp);
 							if (log.timestamp === lastTimestamp) return;
+							lastTimestampRead = log.timestamp;
 						}
 					}
 				}).then(resolve, reject);
