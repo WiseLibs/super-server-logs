@@ -30,7 +30,7 @@
 
 # *class* LogManager
 
-This class provides log rotation. It keeps track of log files within a directory, detects when the current log file is too big or too old, and deletes the oldest log files when necessary.
+This class provides log management and log rotation. It should be used within the master process of your [server cluster](https://nodejs.org/api/cluster.html). It keeps track of log files within a directory, detects when the current log file is too big or too old, and deletes the oldest log files when necessary. It also provides the filenames to use for your loggers.
 
 LogManager is a subclass of [EventEmitter][EventEmitter].
 
