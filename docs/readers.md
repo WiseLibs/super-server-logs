@@ -28,7 +28,7 @@
 - [enum `Lifecycle`](#enum-lifecycle)
 - [enum `HttpMethod`](#enum-httpmethod)
 
-# class *LogReader*
+# *class* LogReader
 
 This class is the primary interface used to read logs. Logs are stored in an efficient binary format, so they can't be read directly by humans.
 
@@ -164,7 +164,7 @@ for await (const chunk of reader.bulkRangeReversed(Date.now() - DAY, Date.now())
 }
 ```
 
-# class *LogEntry*
+# *class* LogEntry
 
 This class represents individual log entries. Every LogEntry has the following properties:
 
@@ -246,7 +246,7 @@ Returns an object that describes an exception that was thrown. The object will e
 
 Returns a JSON-compatible representation of the LogEntry.
 
-# namespace *BulkParser*
+# *namespace* BulkParser
 
 ### BulkParser.read(chunks)
 
@@ -293,7 +293,7 @@ for await (const block of BulkParser.read(rawChunks)) {
 }
 ```
 
-# class *LogDirectorySource*
+# *class* LogDirectorySource
 
 Every [LogReader](#class-logreader) needs a source from which to read logs. The most common source is simply the filesystem directory that the logs were written to. LogDirectorySource does exactly that; it allows you to read log files from a directory on the filesystem. This class is not available in the browser.
 
@@ -324,13 +324,13 @@ for await (const log of reader.tail(Date.now())) {
 }
 ```
 
-# class *Vfs*
+# *class* Vfs
 
 Instead of using [LogDirectorySource][LogDirectorySource], you can read logs from any arbitrary source by creating your own implementation of Vfs. For example, this could allow you to read raw binary logs in a browser.
 
 To learn how to implement a Vfs, see the [source code]('../src/shared/vfs.js').
 
-# enum *LogType*
+# *enum* LogType
 
 - `LogType.REQUEST`: This log indicates that an HTTP request was received. This log is only concerned with the HTTP request's "head"; the request body may still be pending.
 - `LogType.REQUEST_META`: This log contains application-specific metadata that was associated with an HTTP request.
@@ -340,7 +340,7 @@ To learn how to implement a Vfs, see the [source code]('../src/shared/vfs.js').
 - `LogType.LIFECYCLE`: This log indicates that a lifecycle event occured within the [server cluster's](https://nodejs.org/api/cluster.html) master process or one of its worker processes.
 - `LogType.UNCAUGHT_EXCEPTION`: This log indicates that an uncaught exception was thrown within the [server cluster's](https://nodejs.org/api/cluster.html) master process or one of its worker processes.
 
-# enum *LogLevel*
+# *enum* LogLevel
 
 - `LogType.CRITICAL`: This log represents a critical error that prevented the application from functioning even at a basic level.
 - `LogType.ERROR`: This log represents an unexpected error that prevented a user action from being satisfied.
@@ -352,7 +352,7 @@ Note that there's no DEBUG level. That's because DEBUG logs are only *conditiona
 
 > Currently, there are three log types capable of containing error information (and thus containing DEBUG logs): `RESPONSE`, `RESPONSE_FINISHED`, and `UNCAUGHT_EXCEPTION`.
 
-# enum *Lifecycle*
+# *enum* Lifecycle
 
 All logs that have `log.type === LogType.LIFECYCLE` additionally have an `event` property, indicating the lifecycle event that has occured:
 
@@ -371,7 +371,7 @@ All logs that have `log.type === LogType.LIFECYCLE` additionally have an `event`
 - `Lifecycle.MASTER_PING`: Used internally.
 - `Lifecycle.WORKER_PING`: Used internally.
 
-# enum *HttpMethod*
+# *enum* HttpMethod
 
 - `HttpMethod.GET`
 - `HttpMethod.HEAD`

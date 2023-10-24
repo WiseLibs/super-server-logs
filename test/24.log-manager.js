@@ -101,7 +101,7 @@ describe('LogManager', function () {
 	});
 
 	describe('event "error"', function () {
-		it('is emitted if fs.stat() fails', async function () {
+		util.itUnix('is emitted if fs.stat() fails', async function () {
 			this.slow(5000);
 			try {
 				manager = new LogManager(util.next(), { pollInterval: 25 });
@@ -157,14 +157,14 @@ describe('LogManager', function () {
 			expect(fs.statSync(util.current()).isDirectory()).to.be.true;
 		});
 
-		it('ensures the created directory has unix permissions 0o700', async function () {
+		util.itUnix('ensures the created directory has unix permissions 0o700', async function () {
 			expect(fs.existsSync(util.next())).to.be.false;
 			manager = new LogManager(util.current());
 			expect(fs.existsSync(util.current())).to.be.true;
 			expect(fs.statSync(util.current()).mode & 0o777).to.equal(0o700);
 		});
 
-		it('does not modify the permissions of the directory if it already exists', async function () {
+		util.itUnix('does not modify the permissions of the directory if it already exists', async function () {
 			fs.mkdirSync(util.next(), { mode: 0o711 });
 			manager = new LogManager(util.current());
 			expect(fs.existsSync(util.current())).to.be.true;

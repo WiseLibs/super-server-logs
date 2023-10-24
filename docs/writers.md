@@ -2,8 +2,8 @@
 
 - [class `LogManager`](#class-logmanager)
 	- [`new LogManager(dirname[, options])`](#new-logmanagerdirname-options)
-	- [event `"rotate"`](#eventrotate)
-	- [event `"error"`](#eventerror)
+	- [event `"rotate"`](#event-rotate)
+	- [event `"error"`](#event-error)
 	- [`manager.close()`](#managerclose)
 	- [`manager.closed`](#managerclosed)
 	- [`manager.dirname`](#managerdirname)
@@ -28,7 +28,7 @@
 	- [`requestLogger.closed`](#requestloggerclosed)
 	- [`requestLogger.requestId`](#requestloggerrequestid)
 
-# class *LogManager*
+# *class* LogManager
 
 This class provides log rotation. It keeps track of log files within a directory, detects when the current log file is too big or too old, and deletes the oldest log files when necessary.
 
@@ -49,13 +49,13 @@ LogManager is able to enforce `logSizeLimit` and `logAgeLimit` by simply unlinki
 
 The `granularity` option controls how much splitting to do. For example, if `logAgeLimit` is 10 months and `granularity` is 10, then each log file would span no more than 1 month. Increasing the granularity increases the number of log files that will created, but also improves the precision of the `logSizeLimit` and `logAgeLimit` options. These limits are expected to have an error of approximately `±1 / granularity`. For example, with the default granularity of `20`, the expected error is `±5%`. Thus, with a `logSizeLimit` of 2 GiB, you should expect the logs to grow to 2.1 GiB, and possibly more depending on how many logs can be written before the `pollInterval` detects them.
 
-### event `"rotate"`
+### *event* `"rotate"`
 
 - `filename` [&lt;string&gt;][string] The path of the new log file that should be used.
 
 This event is emitted when the LogManager wants you to change the file that all loggers are writing too. You should first call [`.rotate(filename)`](#masterloggerrotatefilename) on the master process's [MasterLogger](#class-masterlogger), and then call [`.rotate(filename)`](#workerloggerrotatefilename) on each worker process's [WorkerLogger](#class-workerlogger). You'll need to utilize [IPC](https://nodejs.org/api/cluster.html#workersendmessage-sendhandle-options-callback) to send this instruction from the master process to each worker process.
 
-### event `"error"`
+### *event* `"error"`
 
 - `error` [&lt;Error&gt;][Error] An unexpected error.
 
@@ -81,7 +81,7 @@ The file path of the log directory being managed.
 
 The file path of the current log file that all loggers should be writing to.
 
-# class *MasterLogger*
+# *class* MasterLogger
 
 This is the logger used by the [server cluster's](https://nodejs.org/api/cluster.html) master process. It internally maintains state that is necessary for writing well-formed logs, so only one instance should be used for the entire lifespan of the master process.
 
@@ -134,7 +134,7 @@ Closes the logger, flushing any remaining logs to the filesystem. This happens s
 
 Indicates whether or not the logger is closed.
 
-# class *WorkerLogger*
+# *class* WorkerLogger
 
 This is the logger used by each worker process within a [server cluster](https://nodejs.org/api/cluster.html). Each worker process should only have one WorkerLogger.
 
@@ -190,7 +190,7 @@ Closes the logger, flushing any remaining logs to the filesystem. This happens s
 
 Indicates whether or not the logger is closed.
 
-# class *RequestLogger*
+# *class* RequestLogger
 
 Whenever a worker process receives an HTTP request, you should use the [WorkerLogger][WorkerLogger] to spawn a new RequestLogger, and then use that RequestLogger for all request-related activity. Each HTTP request should have its own RequestLogger.
 

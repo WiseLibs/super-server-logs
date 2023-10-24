@@ -40,7 +40,7 @@ describe('LogDirectorySource', function () {
 			expect(result.lastIndexOf(SEPARATOR)).to.be.above(1024 * 450);
 		});
 
-		it('can return data from files that were deleted/unlinked', async function () {
+		util.itUnix('can return data from files that were deleted/unlinked', async function () {
 			vfs = await createVfs(context);
 			await fs.rm(context.dirname, { recursive: true });
 			const result = await vfs.read(1024 * 200, 1024 * 500);
@@ -129,7 +129,7 @@ describe('LogDirectorySource', function () {
 			expect(Buffer.from(result).includes('helloworld')).to.be.true;
 		});
 
-		it('if lazy, throws when opening a file that was deleted/unlinked', async function () {
+		util.itUnix('if lazy, throws when opening a file that was deleted/unlinked', async function () {
 			vfs = await createVfs(context, { lazy: true, cacheSize: 0 });
 			await fs.unlink(context.filenames[0]);
 			await expectToThrow(vfs.read(0, 500), Error, /\bENOENT\b/);
@@ -175,7 +175,7 @@ describe('LogDirectorySource', function () {
 			expect(Buffer.from(result2).includes('helloworld')).to.be.true;
 		});
 
-		it('saves data to cache', async function () {
+		util.itUnix('saves data to cache', async function () {
 			vfs = await createVfs(context, { lazy: true });
 			await vfs.read(1024 * 200, 1024 * 500);
 			await vfs.read(1024 * 900, 500);
