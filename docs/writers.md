@@ -30,7 +30,7 @@
 
 # *class* LogManager
 
-This class provides log management and log rotation. It should be used within the master process of your [server cluster](https://nodejs.org/api/cluster.html). It keeps track of log files within a directory, detects when the current log file is too big or too old, and deletes the oldest log files when necessary. It also provides the filenames to use for your loggers.
+This class faciliates log rotation. It should be used within the master process of your [server cluster](https://nodejs.org/api/cluster.html). It keeps track of log files within a directory, detects when the log files get too big or too old, and deletes the oldest files when necessary. It also provides the filenames that your loggers should write to.
 
 LogManager is a subclass of [EventEmitter][EventEmitter].
 
@@ -45,21 +45,21 @@ LogManager is a subclass of [EventEmitter][EventEmitter].
 
 If the given `dirname` does not yet exist, it is created.
 
-LogManager is able to enforce `logSizeLimit` and `logAgeLimit` by simply unlinking files on the filesystem, without needing to actually move any data around. This is possible because all loggers are periodically instructed to write to new log files, effectively splitting the logs into many small-ish files.
+LogManager is able to enforce `logSizeLimit` and `logAgeLimit` by simply unlinking files on the filesystem, without needing to actually move any data around. This is possible because all loggers are periodically instructed to switch to new log files, thus splitting the logs into many small-ish files.
 
-The `granularity` option controls how much splitting to do. For example, if `logAgeLimit` is 10 months and `granularity` is 10, then each log file would span no more than 1 month. Increasing the granularity increases the number of log files that will created, but also improves the precision of the `logSizeLimit` and `logAgeLimit` options. These limits are expected to have an error of approximately `±1 / granularity`. For example, with the default granularity of `20`, the expected error is `±5%`. Thus, with a `logSizeLimit` of 2 GiB, you should expect the logs to grow to 2.1 GiB, and possibly more depending on how many logs can be written before the `pollInterval` detects them.
+The `granularity` option controls how much splitting occurs. For example, if `logAgeLimit` is 10 months and `granularity` is 10, then each log file would span no more than 1 month. Increasing the granularity increases the number of log files that will created, but also improves the precision of the `logSizeLimit` and `logAgeLimit` options. These limits are expected to have an error of approximately `±1 / granularity`. For example, with the default granularity of `20`, the expected error is `±5%`. Thus, with a `logSizeLimit` of 2 GiB, you should expect the logs to grow to 2.1 GiB, and possibly more depending on how many logs can be written before the `pollInterval` detects them.
 
 ### *event* `'rotate'`
 
-- `filename` [&lt;string&gt;][string] The path of the new log file that should be used.
+- `filename` [&lt;string&gt;][string] The path of the new log file that should be used by all loggers.
 
-This event is emitted when the LogManager wants you to change the file that all loggers are writing too. You should first call [`.rotate(filename)`](#masterloggerrotatefilename) on the master process's [MasterLogger](#class-masterlogger), and then call [`.rotate(filename)`](#workerloggerrotatefilename) on each worker process's [WorkerLogger](#class-workerlogger). You'll need to utilize [IPC](https://nodejs.org/api/cluster.html#workersendmessage-sendhandle-options-callback) to send this instruction from the master process to each worker process.
+This event is emitted when the LogManager wants you to change the file that all loggers are writing to. You should first call [`.rotate(filename)`](#masterloggerrotatefilename) on the [MasterLogger](#class-masterlogger), *and then* call [`.rotate(filename)`](#workerloggerrotatefilename) on each [WorkerLogger](#class-workerlogger). You'll need to utilize [IPC](https://nodejs.org/api/cluster.html#workersendmessage-sendhandle-options-callback) to send this instruction from the master process to each worker process.
 
 ### *event* `'error'`
 
-- `error` [&lt;Error&gt;][Error] An unexpected error.
+- `error` [&lt;Error&gt;][Error]
 
-This event indicates that an error occurred during some filesystem operation. The LogManager will continue trying to function until explicitly [closed](#managerclose).
+This event indicates that an error occurred during some filesystem operation. Despite this, the LogManager will continue trying to function until explicitly [closed](#managerclose).
 
 ### manager.close()
 
@@ -92,7 +92,7 @@ This is the logger used by the [server cluster's](https://nodejs.org/api/cluster
 	- `highWaterMark` [&lt;number&gt;][number] The maximum amount of data (in bytes) that can be buffered before being flushed. **Default:** `32768` (32 KiB).
 	- `outputDelay` [&lt;number&gt;][number] The maximum amount of time (in milliseconds) that data can be buffered for, before being flushed. **Default:** `200`.
 	- `compression` [&lt;boolean&gt;][boolean] Whether or not to compress logs. Compressing saves disk space but lowers the throughput of reading logs. **Default:** `true`.
-	- `pingDelay` [&lt;number&gt;][number] How often an internal "ping" should be written to the logs. Reducing this delay uses more disk space, but may improve the performance of reading logs. **Default:** `60000` (60 seconds).
+	- `pingDelay` [&lt;number&gt;][number] How often an internal "ping" should be written to the logs (see below). **Default:** `60000`.
 	- `debugLogLimit` [&lt;number&gt;][number] The maixmum number of DEBUG logs to keep in memory before discarding the oldest ones. DEBUG logs are kept in memory so they can be conditionally logged if/when an error occurs. **Default:** `100`.
 
 If the given `filename` does not yet exist, it is created.
@@ -104,12 +104,12 @@ Most applications shouldn't have to worry about the `pingDelay` option. Internal
 ### Master logging methods
 
 - `masterLogger.STARTING_UP()`: This MUST be the first thing logged whenever a master process first starts up.
-- `masterLogger.STARTING_UP_COMPLETED()`: This should be logged after all workers have been spawned, and their HTTP servers have all been started.
-- `masterLogger.SHUTTING_DOWN()`: This should be logged when the master process wants to initiate a graceful shutdown procedure, but before any workers have been instructed to shut down.
-- `masterLogger.SHUTTING_DOWN_COMPLETED()`: This should be logged after the master process finishes shutting down, and all workers have exited (regardless of whether the shutdown was actually graceful).
+- `masterLogger.STARTING_UP_COMPLETED()`: This SHOULD be logged after all workers have been spawned, and their HTTP servers have all been started.
+- `masterLogger.SHUTTING_DOWN()`: This SHOULD be logged when the master process wants to initiate a graceful shutdown procedure, but before any workers have been instructed to shut down.
+- `masterLogger.SHUTTING_DOWN_COMPLETED()`: This SHOULD be logged after the master process finishes shutting down, and all workers have exited (regardless of whether the shutdown was actually graceful).
 - `masterLogger.WORKER_SPAWNED(workerId)`: This MUST be logged whenever the master process spawns a new worker process.
 - `masterLogger.WORKER_EXITED(workerId, exitCode[, signal])`: This MUST be logged whenever the master process detects that a worker process has exited.
-- `masterLogger.UNCAUGHT_EXCEPTION(error)`: This should be logged whenever an uncaught exception is detected within the master process.
+- `masterLogger.UNCAUGHT_EXCEPTION(error)`: This SHOULD be logged whenever an uncaught exception is detected within the master process.
 - `masterLogger.critical(data)`: This writes a CRITICAL-level log.
 - `masterLogger.error(data)`: This writes an ERROR-level log.
 - `masterLogger.warn(data)`: This writes a WARN-level log.
@@ -153,13 +153,13 @@ The `highWaterMark` and `outputDelay` options control how logs are batched. If e
 
 ### Worker logging methods
 
-- `workerLogger.WORKER_STARTED()`: This should be logged when the worker process starts, before starting its HTTP server or performing its setup procedure (if any).
-- `workerLogger.WORKER_GOING_ONLINE()`: This should be logged after the worker process completes its setup procedure (if any), but before starting its HTTP server.
-- `workerLogger.WORKER_ONLINE()`: This should be logged when the worker process successfully starts its HTTP server.
-- `workerLogger.WORKER_GOING_OFFLINE()`: This should be logged when the worker process wants to initiate a graceful shutdown procedure.
-- `workerLogger.WORKER_OFFLINE()`: This should be logged when the worker process has successfully shut down its HTTP server (regardless of whether the shutdown was actually graceful) and all connections/requests have ended, but before performing its teardown procedure (if any).
-- `workerLogger.WORKER_DONE()`: This should be logged after the worker process completes its teardown procedure (if any).
-- `workerLogger.UNCAUGHT_EXCEPTION(error)`: This should be logged whenever an uncaught exception is detected within the worker process.
+- `workerLogger.WORKER_STARTED()`: This SHOULD be logged when the worker process starts, before starting its HTTP server or performing its setup procedure (if any).
+- `workerLogger.WORKER_GOING_ONLINE()`: This SHOULD be logged after the worker process completes its setup procedure (if any), but before starting its HTTP server.
+- `workerLogger.WORKER_ONLINE()`: This SHOULD be logged when the worker process successfully starts its HTTP server.
+- `workerLogger.WORKER_GOING_OFFLINE()`: This SHOULD be logged when the worker process wants to initiate a graceful shutdown procedure.
+- `workerLogger.WORKER_OFFLINE()`: This SHOULD be logged when the worker process has successfully shut down its HTTP server (regardless of whether the shutdown was actually graceful) and all connections/requests have ended, but before performing its teardown procedure (if any).
+- `workerLogger.WORKER_DONE()`: This SHOULD be logged after the worker process completes its teardown procedure (if any).
+- `workerLogger.UNCAUGHT_EXCEPTION(error)`: This SHOULD be logged whenever an uncaught exception is detected within the worker process.
 - `workerLogger.critical(data)`: This writes a CRITICAL-level log.
 - `workerLogger.error(data)`: This writes an ERROR-level log.
 - `workerLogger.warn(data)`: This writes a WARN-level log.
@@ -196,10 +196,10 @@ Whenever a worker process receives an HTTP request, you should use the [WorkerLo
 
 ### Request logging methods
 
-- `requestLogger.REQUEST(req)`: This should be logged when the associated HTTP request is first received by the server. Only the request's "head" needs to be received; the request body may still be pending.
+- `requestLogger.REQUEST(req)`: This SHOULD be logged when the associated HTTP request is first received by the server. Only the request's "head" needs to be received; the request body may still be pending.
 - `requestLogger.REQUEST_META(data)`: This can be logged to associate arbitrary application-specific metadata to the request.
-- `requestLogger.RESPONSE(statusCode[, error])`: This should be logged when a response is sent for the associated HTTP request. Only the response's "head" needs to be sent; the response body may still be pending. Passing an `error` indicates that an unexpected error occurred while trying to handle the request.
-- `requestLogger.RESPONSE_FINISHED([error])`: This should be logged when the response body is done being sent (even if the response body was empty). Passing an `error` indicates that an unexpected error occurred while trying to send the response body, but after the response's "head" was already sent.
+- `requestLogger.RESPONSE(statusCode[, error])`: This SHOULD be logged when a response is sent for the associated HTTP request. Only the response's "head" needs to be sent; the response body may still be pending. Passing an `error` indicates that an unexpected error occurred while trying to handle the request.
+- `requestLogger.RESPONSE_FINISHED([error])`: This SHOULD be logged when the response body is done being sent (even if the response body was empty). Passing an `error` indicates that an unexpected error occurred while trying to send the response body, but after the response's "head" was already sent.
 - `requestLogger.critical(data)`: This writes a CRITICAL-level log.
 - `requestLogger.error(data)`: This writes an ERROR-level log.
 - `requestLogger.warn(data)`: This writes a WARN-level log.
