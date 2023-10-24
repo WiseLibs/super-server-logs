@@ -228,6 +228,9 @@ async function isRotating(file) {
 				return false;
 			} else if (!pendingWorkers) {
 				if (log.event === MASTER_PING) {
+					if (!log.workerIds.length) {
+						return false;
+					}
 					pendingWorkers = new Set(log.workerIds);
 				}
 			} else if (log.workerId != null) {

@@ -115,7 +115,7 @@ describe('Logger', function () {
 			expect(result[result.length - 1]).to.equal(SEPARATOR);
 			expect([...result.subarray(0, -1)]).to.not.include(SEPARATOR);
 			const unescaped = unescapeBlock(result.subarray(0, -1));
-			expect([...unescaped.subarray(0, -1)]).to.include(SEPARATOR);
+			expect([...unescaped]).to.include(SEPARATOR);
 			expect(Boolean(unescaped[0] & 0x80)).to.be.true;
 			unescaped[0] = unescaped[0] >> 4 | (unescaped[0] & 0xf) << 4; // Restore zlib header
 			const decompressed = decompress(unescaped);

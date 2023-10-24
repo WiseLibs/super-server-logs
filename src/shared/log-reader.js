@@ -62,7 +62,7 @@ module.exports = class LogReader {
 				for (;;) {
 					await sleep(pollInterval);
 
-					const newSize = await vfs.size();
+					const newSize = await this._vfs.size();
 					if (newSize > totalSize) {
 						totalSize = newSize;
 						break;
@@ -216,7 +216,7 @@ module.exports = class LogReader {
 				for (;;) {
 					await sleep(pollInterval);
 
-					const newSize = await vfs.size();
+					const newSize = await this._vfs.size();
 					if (newSize > totalSize) {
 						totalSize = newSize;
 						break;
