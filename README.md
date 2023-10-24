@@ -29,8 +29,8 @@ npm install super-server-logs
 
 # Documentation
 
-- [API documentation for log **_writers_**](./docs/writers.md)
 - [API documentation for log **_readers_**](./docs/readers.md)
+- [API documentation for log **_writers_**](./docs/writers.md)
 
 ## License
 
