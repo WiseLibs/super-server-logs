@@ -79,17 +79,20 @@ module.exports = class LogEntry {
 				this.requestId = reader.bytes(16);
 				this.data = reader.string();
 				break;
-			case RESPONSE:
+			case RESPONSE: {
 				this.level = LogLevel.INFO;
 				this.type = LogType.RESPONSE;
 				this.workerId = reader.dynamicInteger();
 				this.requestId = reader.bytes(16);
 				this.error = reader.string() || null;
+				const flagByte = reader.uint8();
 				this.statusCode = reader.dynamicInteger();
-				if (this.error) {
+				const isExpectedError = (flagByte & 1) === 1;
+				if (!isExpectedError && this.error) {
 					this.level = LogLevel.ERROR;
 				}
 				break;
+			}
 			case RESPONSE_FINISHED:
 				this.level = LogLevel.INFO;
 				this.type = LogType.RESPONSE_FINISHED;

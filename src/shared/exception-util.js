@@ -3,7 +3,7 @@ const ARBITRARY_VALUE = 0;
 const ERROR_LIKE = 1;
 
 // Serializes an exception for logging purposes.
-exports.encode = (err, debugLogs) => {
+exports.encode = (err, debugLogs, isExpectedError = false) => {
 	let type = ARBITRARY_VALUE;
 	let value = '';
 	const properties = {};
@@ -14,7 +14,7 @@ exports.encode = (err, debugLogs) => {
 		assignProperties(properties, err);
 
 		const { stack, message, name } = err;
-		if (typeof stack === 'string') {
+		if (!isExpectedError && typeof stack === 'string') {
 			value = stack;
 			type = ERROR_LIKE;
 		} else if (typeof message === 'string') {

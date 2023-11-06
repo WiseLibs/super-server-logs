@@ -206,7 +206,7 @@ The following methods each write data to the log file. Each method is used for a
 
 - `requestLogger.REQUEST(req)`: This SHOULD be logged when the associated HTTP request is first received by the server. Only the request's "head" needs to be received; the request body may still be pending.
 - `requestLogger.REQUEST_META(data)`: This can be logged to associate arbitrary application-specific metadata to the request.
-- `requestLogger.RESPONSE(statusCode[, error])`: This SHOULD be logged when a response is sent for the associated HTTP request. Only the response's "head" needs to be sent; the response body may still be pending. Passing an `error` indicates that an unexpected error occurred while trying to handle the request.
+- `requestLogger.RESPONSE(statusCode[, error[, isExpectedError]])`: This SHOULD be logged when a response is sent for the associated HTTP request. Only the response's "head" needs to be sent; the response body may still be pending. Passing an `error` indicates that an unexpected error occurred while trying to handle the request. Setting `isExpectedError` to `true` causes the error's stack trace to be omitted and the log level to be INFO instead of ERROR.
 - `requestLogger.RESPONSE_FINISHED([error])`: This SHOULD be logged when the response body is done being sent (even if the response body was empty). Passing an `error` indicates that an unexpected error occurred while trying to send the response body, after the response's "head" was already sent.
 - `requestLogger.critical(data)`: This writes a CRITICAL-level log.
 - `requestLogger.error(data)`: This writes an ERROR-level log.

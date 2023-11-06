@@ -58,9 +58,12 @@ module.exports = class RequestLogger {
 		return this;
 	}
 
-	RESPONSE(statusCode, err) {
+	RESPONSE(statusCode, err, isExpectedError = false) {
 		if (!Number.isInteger(statusCode)) {
 			throw new TypeError('Expected statusCode to be an integer');
+		}
+		if (typeof isExpectedError !== 'boolean') {
+			throw new TypeError('Expected third argument to be a boolean, if provided');
 		}
 		const parent = this._parent;
 		if (parent._fd >= 0) {
@@ -68,8 +71,10 @@ module.exports = class RequestLogger {
 
 			if (err == null) {
 				writer.string('');
+				writer.uint8(0);
 			} else {
-				writer.json(ExceptionUtil.encode(err, this._debugLogs));
+				writer.json(ExceptionUtil.encode(err, this._debugLogs, isExpectedError));
+				writer.uint8(isExpectedError ? 1 : 0);
 				this._debugLogs = null;
 			}
 

@@ -102,6 +102,7 @@ describe('RequestLogger', function () {
 			requestLogger._requestIdBuffer = REQUEST_ID;
 			expect(requestLogger.RESPONSE(200)).to.equal(requestLogger);
 			expect(requestLogger.RESPONSE(400, err)).to.equal(requestLogger);
+			expect(requestLogger.RESPONSE(400, err, true)).to.equal(requestLogger);
 			expect(fs.readFileSync(util.current())).to.deep.equal(new Uint8Array());
 			await new Promise(r => setTimeout(r, 60));
 			const reader = new Reader(fs.readFileSync(util.current()));
@@ -123,6 +124,16 @@ describe('RequestLogger', function () {
 				workerId: 23,
 				requestId: BufferUtil.normalize(uuidParse(requestLogger.requestId)),
 				error: JSON.stringify(ExceptionUtil.encode(err)),
+				statusCode: 400,
+			});
+			expect(new LogEntry(reader)).to.deep.equal({
+				timestamp: TIMESTAMP,
+				nonce: 2,
+				level: LogLevel.INFO,
+				type: LogType.RESPONSE,
+				workerId: 23,
+				requestId: BufferUtil.normalize(uuidParse(requestLogger.requestId)),
+				error: JSON.stringify(ExceptionUtil.encode(err, null, true)),
 				statusCode: 400,
 			});
 		});
