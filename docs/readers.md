@@ -198,7 +198,7 @@ Additional properties depending on the log's type:
 - `LogType.LIFECYCLE`:
 	- `log.event` [&lt;number&gt;][number] The type of lifecycle event that occured. Possible values are defined by the [Lifecycle](#enum-lifecycle) enum.
 	- Additional properties for `log.event === Lifecycle.WORKER_EXITED`:
-		- `log.exitCode` [&lt;number&gt;][number] The exit code of the worker process.
+		- `log.exitCode` [&lt;number&gt;][number] | [&lt;null&gt;][null] The exit code of the worker process (if it exited normally).
 		- `log.signal` [&lt;string&gt;][string] | [&lt;null&gt;][null] The POSIX signal that terminated the worker process (if any).
 - `LogType.UNCAUGHT_EXCEPTION`:
 	- `log.error` [&lt;string&gt;][string] Details describing an uncaught exception that occured within the process. To get a human-readable version, use [`log.getError()`](#loggeterror).

@@ -30,7 +30,7 @@ declare namespace SuperServerLogs {
 		readonly method?: HttpMethod | string;
 		readonly url?: string;
 		readonly statusCode?: number;
-		readonly exitCode?: number;
+		readonly exitCode?: number | null;
 		readonly signal?: string | null;
 		readonly data?: string;
 		readonly error?: string | null;
@@ -86,7 +86,7 @@ declare namespace SuperServerLogs {
 		SHUTTING_DOWN(): this;
 		SHUTTING_DOWN_COMPLETED(): this;
 		WORKER_SPAWNED(workerId: number): this;
-		WORKER_EXITED(workerId: number, exitCode: number, signal?: string | null): this;
+		WORKER_EXITED(workerId: number, exitCode: number | null, signal: string | null): this;
 		UNCAUGHT_EXCEPTION(err: any): this;
 		critical(data: any): this;
 		error(data: any): this;
@@ -124,7 +124,7 @@ declare namespace SuperServerLogs {
 		private constructor();
 		REQUEST(req: HttpRequest): this;
 		REQUEST_META(data: any): this;
-		RESPONSE(statusCode: number, err?: any): this;
+		RESPONSE(statusCode: number, err?: any, isExpectedError?: boolean): this;
 		RESPONSE_FINISHED(err?: any): this;
 		critical(data: any): this;
 		error(data: any): this;

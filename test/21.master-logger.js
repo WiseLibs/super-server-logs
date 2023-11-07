@@ -92,6 +92,7 @@ describe('MasterLogger', function () {
 			logger = new MasterLogger(util.next());
 			expect(logger.WORKER_EXITED(23, 0, null)).to.equal(logger);
 			expect(logger.WORKER_EXITED(24, 47, 'SIGINT')).to.equal(logger);
+			expect(logger.WORKER_EXITED(25, null, 'SIGKILL')).to.equal(logger);
 			const reader = new Reader(fs.readFileSync(util.current()));
 			expect(new LogEntry(reader)).to.deep.equal({
 				timestamp: TIMESTAMP,
@@ -113,6 +114,17 @@ describe('MasterLogger', function () {
 				event: Lifecycle.WORKER_EXITED,
 				exitCode: 47,
 				signal: 'SIGINT',
+			});
+			reader.offset += 1;
+			expect(new LogEntry(reader)).to.deep.equal({
+				timestamp: TIMESTAMP,
+				nonce: 2,
+				level: LogLevel.WARN,
+				type: LogType.LIFECYCLE,
+				workerId: 25,
+				event: Lifecycle.WORKER_EXITED,
+				exitCode: null,
+				signal: 'SIGKILL',
 			});
 		});
 
@@ -310,7 +322,7 @@ describe('MasterLogger', function () {
 			logger.WORKER_SPAWNED(23);
 			logger.WORKER_SPAWNED(95);
 			logger.WORKER_SPAWNED(400);
-			logger.WORKER_EXITED(95, 0);
+			logger.WORKER_EXITED(95, 0, null);
 			await new Promise(r => setTimeout(r, 60));
 			logger.flush();
 			let reader = new Reader(fs.readFileSync(util.current()));
@@ -434,7 +446,7 @@ describe('MasterLogger', function () {
 		specify('WORKER_EXITED() is a no-op', async function () {
 			logger = new MasterLogger(null, { outputDelay: 0 });
 			expect(logger.closed).to.be.true;
-			expect(logger.WORKER_EXITED(23, 0)).to.equal(logger);
+			expect(logger.WORKER_EXITED(23, 0, null)).to.equal(logger);
 		});
 
 		specify('UNCAUGHT_EXCEPTION() is a no-op', async function () {

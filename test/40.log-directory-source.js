@@ -94,7 +94,7 @@ describe('LogDirectorySource', function () {
 			expect(result1.lastIndexOf(SEPARATOR)).to.be.above(1024 * 100);
 			expect(Buffer.from(result1).includes('helloworld')).to.be.false;
 			await inContext(context, (logger) => {
-				logger.WORKER_EXITED(27, 0);
+				logger.WORKER_EXITED(27, 0, null);
 			});
 			await new Promise(r => setTimeout(r, 2));
 			const result2 = await vfs.read(1024 * 900, 1024 * 900);
@@ -219,7 +219,7 @@ describe('LogDirectorySource', function () {
 			await new Promise(r => setTimeout(r, 2));
 			expect(await vfs.size()).to.be.below(totalSize + 30);
 			await inContext(context, (logger) => {
-				logger.WORKER_EXITED(27, 0);
+				logger.WORKER_EXITED(27, 0, null);
 			});
 			await new Promise(r => setTimeout(r, 2));
 			expect(await vfs.size()).to.be.above(totalSize + 500 * 200);

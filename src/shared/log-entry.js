@@ -161,17 +161,20 @@ module.exports = class LogEntry {
 				this.workerId = reader.dynamicInteger();
 				this.event = EVENT_TO_LIFECYCLE[eventType];
 				break;
-			case WORKER_EXITED:
+			case WORKER_EXITED: {
 				this.level = LogLevel.INFO;
 				this.type = LogType.LIFECYCLE;
 				this.workerId = reader.dynamicInteger();
 				this.event = EVENT_TO_LIFECYCLE[eventType];
-				this.exitCode = reader.uint8();
+				const flagByte = reader.uint8();
+				const hasExitCode = (flagByte & 1) === 1;
+				this.exitCode = hasExitCode ? reader.dynamicInteger() : null;
 				this.signal = reader.string() || null;
 				if (this.exitCode !== 0) {
 					this.level = LogLevel.WARN;
 				}
 				break;
+			}
 			case MASTER_UNCAUGHT_EXCEPTION:
 				this.level = LogLevel.CRITICAL;
 				this.type = LogType.UNCAUGHT_EXCEPTION;

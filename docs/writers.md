@@ -112,7 +112,7 @@ The following methods each write data to the log file. Each method is used for a
 - `masterLogger.SHUTTING_DOWN()`: This SHOULD be logged when the master process wants to initiate a graceful shutdown procedure, but before any workers have been instructed to shut down.
 - `masterLogger.SHUTTING_DOWN_COMPLETED()`: This SHOULD be logged after the master process finishes shutting down, and all workers have exited (regardless of whether the shutdown was actually graceful).
 - `masterLogger.WORKER_SPAWNED(workerId)`: This MUST be logged whenever the master process spawns a new worker process.
-- `masterLogger.WORKER_EXITED(workerId, exitCode[, signal])`: This MUST be logged whenever the master process detects that a worker process has exited.
+- `masterLogger.WORKER_EXITED(workerId, exitCode, signal)`: This MUST be logged whenever the master process detects that a worker process has exited.
 - `masterLogger.UNCAUGHT_EXCEPTION(error)`: This SHOULD be logged whenever an uncaught exception is detected within the master process.
 - `masterLogger.critical(data)`: This writes a CRITICAL-level log.
 - `masterLogger.error(data)`: This writes an ERROR-level log.

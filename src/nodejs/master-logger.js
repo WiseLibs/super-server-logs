@@ -90,26 +90,30 @@ module.exports = class MasterLogger extends Logger {
 		return this;
 	}
 
-	WORKER_EXITED(workerId, exitCode, signal = null) {
+	WORKER_EXITED(workerId, exitCode, signal) {
 		if (!Number.isInteger(workerId)) {
 			throw new TypeError('Expected workerId to be an integer');
 		}
-		if (!Number.isInteger(exitCode)) {
-			throw new TypeError('Expected exitCode to be an integer');
+		if (exitCode !== null && !Number.isInteger(exitCode)) {
+			throw new TypeError('Expected exitCode to be an integer or null');
 		}
 		if (signal !== null && typeof signal !== 'string') {
 			throw new TypeError('Expected signal to be a string or null');
 		}
 		if (this._fd >= 0) {
-			super.log(new Writer()
+			const writer = new Writer()
 				.uint8(EventTypes.WORKER_EXITED)
 				.uint48(Date.now())
 				.uint16(this._nonce())
-				.dynamicInteger(workerId)
-				.uint8(exitCode)
-				.string(signal || '')
-				.done()
-			).flush();
+				.dynamicInteger(workerId);
+
+			if (exitCode === null) {
+				writer.uint8(0);
+			} else {
+				writer.uint8(1).dynamicInteger(exitCode);
+			}
+
+			super.log(writer.string(signal || '').done()).flush();
 			this._workerIds.delete(workerId);
 		}
 		return this;
