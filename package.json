@@ -1,6 +1,6 @@
 {
   "name": "super-server-logs",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Read and write server logs",
   "author": "Joshua Wise <joshuathomaswise@gmail.com>",
   "homepage": "https://github.com/WiseLibs/super-server-logs#readme",
