@@ -49,7 +49,7 @@ const reader = new LogReader(new LogDirectorySource(dirname));
 
 - `minTimestamp` [&lt;number&gt;][number] The minimum timestamp (inclusive). This indicates where to start reading from. **Default:** `Date.now()`.
 - `options` [&lt;Object&gt;][Object]
-	- `pollInterval` [&lt;number&gt;][number] The delay, in milliseconds, between each poll to the underlying log source (i.e., the filesystem). This controls how frequently new logs can be detected.
+	- `pollInterval` [&lt;number&gt;][number] The delay, in milliseconds, between each poll to the underlying log source (i.e., the filesystem). This controls how frequently new logs can be detected.  **Default:** `200`.
 - Returns: [&lt;AsyncIterable][AsyncIterable][&lt;LogEntry&gt;][LogEntry][&gt;][AsyncIterable]
 
 Yields all logs with a timestamp greater than or equal to `minTimestamp`. New logs will be yielded indefinitely, until the returned [AsyncIterable][AsyncIterable] is stopped (i.e., by a `break` statement).
