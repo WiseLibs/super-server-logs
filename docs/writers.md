@@ -81,6 +81,8 @@ The file path of the log directory being managed.
 
 ### manager.filename
 
+- [&lt;string&gt;][string]
+
 The file path of the current log file that all loggers should be writing to.
 
 ## *class* MasterLogger
