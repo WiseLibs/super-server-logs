@@ -12,3 +12,4 @@ dst/
 build/
 node_modules/
 TODO
+.local/
