@@ -170,7 +170,10 @@ module.exports = class LogEntry {
 				const hasExitCode = (flagByte & 1) === 1;
 				this.exitCode = hasExitCode ? reader.dynamicInteger() : null;
 				this.signal = reader.string() || null;
-				if (this.exitCode !== 0) {
+				if (!(
+					this.exitCode === 0 ||
+					this.exitCode === null && (this.signal === 'SIGTERM' || this.signal === 'SIGINT')
+				)) {
 					this.level = LogLevel.WARN;
 				}
 				break;

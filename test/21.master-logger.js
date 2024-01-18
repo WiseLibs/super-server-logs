@@ -93,6 +93,8 @@ describe('MasterLogger', function () {
 			expect(logger.WORKER_EXITED(23, 0, null)).to.equal(logger);
 			expect(logger.WORKER_EXITED(24, 47, 'SIGINT')).to.equal(logger);
 			expect(logger.WORKER_EXITED(25, null, 'SIGKILL')).to.equal(logger);
+			expect(logger.WORKER_EXITED(26, null, 'SIGTERM')).to.equal(logger);
+			expect(logger.WORKER_EXITED(27, null, 'SIGINT')).to.equal(logger);
 			const reader = new Reader(fs.readFileSync(util.current()));
 			expect(new LogEntry(reader)).to.deep.equal({
 				timestamp: TIMESTAMP,
@@ -125,6 +127,28 @@ describe('MasterLogger', function () {
 				event: Lifecycle.WORKER_EXITED,
 				exitCode: null,
 				signal: 'SIGKILL',
+			});
+			reader.offset += 1;
+			expect(new LogEntry(reader)).to.deep.equal({
+				timestamp: TIMESTAMP,
+				nonce: 3,
+				level: LogLevel.INFO,
+				type: LogType.LIFECYCLE,
+				workerId: 26,
+				event: Lifecycle.WORKER_EXITED,
+				exitCode: null,
+				signal: 'SIGTERM',
+			});
+			reader.offset += 1;
+			expect(new LogEntry(reader)).to.deep.equal({
+				timestamp: TIMESTAMP,
+				nonce: 4,
+				level: LogLevel.INFO,
+				type: LogType.LIFECYCLE,
+				workerId: 27,
+				event: Lifecycle.WORKER_EXITED,
+				exitCode: null,
+				signal: 'SIGINT',
 			});
 		});
 
