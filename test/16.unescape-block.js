@@ -1,5 +1,5 @@
 'use strict';
-const { ESCAPE, SEPARATOR, ESCAPE_CODE_ESCAPE, ESCAPE_CODE_SEPARATOR } = require('../src/shared/common');
+const { ESCAPE, SEPARATOR, ESCAPE_CODE_ESCAPE, ESCAPE_CODE_SEPARATOR, ESCAPE_CODE_SLICEMARKER } = require('../src/shared/common');
 const { escapeBlock, unescapeBlock } = require('../src/shared/common');
 
 describe('unescapeBlock()', function () {
@@ -16,6 +16,21 @@ describe('unescapeBlock()', function () {
 	it('unescapes mixes of escape characters and separator characters', function () {
 		expect(unescapeBlock(new Uint8Array([10, 20, ESCAPE, ESCAPE_CODE_ESCAPE, 30, ESCAPE, ESCAPE_CODE_SEPARATOR, ESCAPE, ESCAPE_CODE_ESCAPE])))
 			.to.deep.equal(new Uint8Array([10, 20, ESCAPE, 30, SEPARATOR, ESCAPE]));
+	});
+
+	it('ignores leading slice markers', function () {
+		expect(unescapeBlock(new Uint8Array([ESCAPE, ESCAPE_CODE_SLICEMARKER, 10, 20, ESCAPE, ESCAPE_CODE_ESCAPE, 30, ESCAPE, ESCAPE_CODE_SEPARATOR, ESCAPE, ESCAPE_CODE_ESCAPE])))
+			.to.deep.equal(new Uint8Array([10, 20, ESCAPE, 30, SEPARATOR, ESCAPE]));
+	});
+
+	it('ignores any data before a slice marker', function () {
+		expect(unescapeBlock(new Uint8Array([10, 20, ESCAPE, ESCAPE_CODE_ESCAPE, ESCAPE, ESCAPE_CODE_SLICEMARKER, 30, ESCAPE, ESCAPE_CODE_SEPARATOR, ESCAPE, ESCAPE_CODE_ESCAPE])))
+			.to.deep.equal(new Uint8Array([30, SEPARATOR, ESCAPE]));
+	});
+
+	it('ignores any data before the final slice marker', function () {
+		expect(unescapeBlock(new Uint8Array([10, 20, ESCAPE, ESCAPE_CODE_ESCAPE, ESCAPE, ESCAPE_CODE_SLICEMARKER, 30, ESCAPE, ESCAPE_CODE_SEPARATOR, ESCAPE, ESCAPE_CODE_SLICEMARKER, ESCAPE, ESCAPE_CODE_ESCAPE])))
+			.to.deep.equal(new Uint8Array([ESCAPE]));
 	});
 
 	it('undoes the effect of escapeBlock()', function () {

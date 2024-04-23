@@ -4,7 +4,7 @@ const path = require('path');
 const { LogReader, BulkParser, LogDirectorySource, MasterLogger, Lifecycle } = require('..');
 const { toLogBasename } = require('../src/nodejs/common');
 const { compress, escapeBlock, unescapeBlock } = require('../src/shared/common');
-const { SEPARATOR, ESCAPE, ESCAPE_CODE_SEPARATOR } = require('../src/shared/common');
+const { SEPARATOR, ESCAPE, ESCAPE_CODE_SEPARATOR, ESCAPE_CODE_SLICEMARKER } = require('../src/shared/common');
 const EventTypes = require('../src/shared/event-types');
 
 describe('BulkParser', function () {
@@ -108,6 +108,21 @@ describe('BulkParser', function () {
 			expect(logs[0].event).to.equal(Lifecycle.STARTING_UP);
 			expect(logs[0].nonce).to.equal(50679);
 			expect(logs[0].timestamp).to.equal(119528466083276);
+		});
+
+		it('supports escaped blocks with slice markers', async function () {
+			const logs = [...BulkParser.parse(new Uint8Array([
+				EventTypes.WORKER_SPAWNED, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+				ESCAPE, ESCAPE_CODE_SLICEMARKER,
+				EventTypes.STARTING_UP, 0, 0, 0, 0, 0, 0, 0, 0,
+				EventTypes.STARTING_UP_COMPLETED, 0, 0, 0, 0, 0, ESCAPE, ESCAPE_CODE_SEPARATOR, 0, 1,
+				SEPARATOR,
+			]))];
+			expect(logs[0].event).to.equal(Lifecycle.STARTING_UP);
+			expect(logs[0].nonce).to.equal(0);
+			expect(logs[1].event).to.equal(Lifecycle.STARTING_UP_COMPLETED);
+			expect(logs[1].nonce).to.equal(1);
+			expect(logs[1].timestamp).to.equal(SEPARATOR);
 		});
 	});
 });

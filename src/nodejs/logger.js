@@ -1,7 +1,7 @@
 'use strict';
 const { openSync, closeSync, writevSync } = require('fs');
 const { normalize } = require('../shared/buffer-util');
-const { compress, escapeBlock, SEPARATOR } = require('../shared/common');
+const { compress, escapeBlock, SEPARATOR, ESCAPE, ESCAPE_CODE_SLICEMARKER } = require('../shared/common');
 
 /*
 	A generic logger that writes binary chunks to a file. It buffers its output
@@ -45,6 +45,7 @@ module.exports = class Logger {
 		this._highWaterMark = highWaterMark;
 		this._outputDelay = outputDelay;
 		this._compression = compression;
+		this._writeSliceMarker = false;
 		this._timer = null;
 		this._flush = flush.bind(this);
 	}
@@ -123,6 +124,7 @@ module.exports = class Logger {
 };
 
 const SEPARATOR_CHUNK = Buffer.from([SEPARATOR]);
+const ESCAPED_SLICEMARKER = Buffer.from([ESCAPE, ESCAPE_CODE_SLICEMARKER]);
 const COMPRESSION_THRESHOLD = 400;
 
 function flush() {
@@ -139,9 +141,19 @@ function flush() {
 		block[0] = block[0] >> 4 | (block[0] & 0xf) << 4;
 	}
 
-	writevSync(this._fd, [escapeBlock(block), SEPARATOR_CHUNK]);
+	// Subclasses of Logger can use "slice markers" to indicate that if any data
+	// was previously written to this block, it must be the result of a partial
+	// disk write (e.g., in the case of unexpected power loss), and it should be
+	// ignored by parsers.
+	if (this._writeSliceMarker) {
+		writevSync(this._fd, [ESCAPED_SLICEMARKER, escapeBlock(block), SEPARATOR_CHUNK]);
+	} else {
+		writevSync(this._fd, [escapeBlock(block), SEPARATOR_CHUNK]);
+	}
+
 	this._outgoing = [];
 	this._outgoingSize = 0;
+	this._writeSliceMarker = false;
 
 	if (this._timer !== null) {
 		clearTimeout(this._timer);

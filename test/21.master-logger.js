@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('fs');
 const { MasterLogger, LogEntry, LogType, LogLevel, Lifecycle } = require('..');
+const { ESCAPE, ESCAPE_CODE_SLICEMARKER } = require('../src/shared/common');
 const ExceptionUtil = require('../src/shared/exception-util');
 const Reader = require('../src/shared/reader');
 const Logger = require('../src/nodejs/logger');
@@ -26,7 +27,10 @@ describe('MasterLogger', function () {
 		specify('STARTING_UP() logs and flushes an event', async function () {
 			logger = new MasterLogger(util.next());
 			expect(logger.STARTING_UP()).to.equal(logger);
-			expect(new LogEntry(new Reader(fs.readFileSync(util.current())))).to.deep.equal({
+			const buffer = fs.readFileSync(util.current());
+			expect(buffer[0]).to.equal(ESCAPE);
+			expect(buffer[1]).to.equal(ESCAPE_CODE_SLICEMARKER);
+			expect(new LogEntry(new Reader(buffer.subarray(2)))).to.deep.equal({
 				timestamp: TIMESTAMP,
 				nonce: 0,
 				level: LogLevel.INFO,
@@ -367,8 +371,11 @@ describe('MasterLogger', function () {
 			logger.STARTING_UP();
 			await new Promise(r => setTimeout(r, 60));
 			logger.flush();
-			reader = new Reader(fs.readFileSync(util.current()));
-			reader.offset = offset;
+			const buffer = fs.readFileSync(util.current());
+			expect(buffer[offset]).to.equal(ESCAPE);
+			expect(buffer[offset + 1]).to.equal(ESCAPE_CODE_SLICEMARKER);
+			reader = new Reader(buffer);
+			reader.offset = offset + 2;
 			new LogEntry(reader); reader.offset += 1;
 			expect(new LogEntry(reader)).to.deep.equal({
 				timestamp: TIMESTAMP,

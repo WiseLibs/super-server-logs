@@ -46,6 +46,7 @@ module.exports = class MasterLogger extends Logger {
 
 	STARTING_UP() {
 		if (this._fd >= 0) {
+			this._writeSliceMarker = true;
 			this._lifecycle(EventTypes.STARTING_UP).flush();
 			this._workerIds.clear();
 		}

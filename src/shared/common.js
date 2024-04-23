@@ -3,8 +3,9 @@ const BufferUtil = require('./buffer-util');
 
 const ESCAPE = exports.ESCAPE = 0xf8;
 const SEPARATOR = exports.SEPARATOR = 0xfa;
-const ESCAPE_CODE_ESCAPE = exports.ESCAPE_CODE_ESCAPE = 0xf8;
-const ESCAPE_CODE_SEPARATOR = exports.ESCAPE_CODE_SEPARATOR = 0xf9;
+const ESCAPE_CODE_ESCAPE = exports.ESCAPE_CODE_ESCAPE = 1;
+const ESCAPE_CODE_SEPARATOR = exports.ESCAPE_CODE_SEPARATOR = 2;
+const ESCAPE_CODE_SLICEMARKER = exports.ESCAPE_CODE_SLICEMARKER = 3;
 
 const ESCAPE_CHUNK = BufferUtil.from([ESCAPE]);
 const SEPARATOR_CHUNK = BufferUtil.from([SEPARATOR]);
@@ -46,6 +47,8 @@ exports.unescapeBlock = (block) => {
 				parts.push(ESCAPE_CHUNK);
 			} else if (escapeCode === ESCAPE_CODE_SEPARATOR) {
 				parts.push(SEPARATOR_CHUNK);
+			} else if (escapeCode === ESCAPE_CODE_SLICEMARKER) {
+				parts.splice(0); // Slice off all previous data in the block
 			} else {
 				throw new TypeError(`Unrecognized escape code: ${escapeCode}`);
 			}

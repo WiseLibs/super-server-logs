@@ -3,7 +3,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const { LogDirectorySource, MasterLogger, Vfs } = require('..');
 const { toLogBasename } = require('../src/nodejs/common');
-const { SEPARATOR } = require('../src/shared/common');
+const { SEPARATOR, ESCAPE, ESCAPE_CODE_SLICEMARKER } = require('../src/shared/common');
 const EventTypes = require('../src/shared/event-types');
 
 describe('LogDirectorySource', function () {
@@ -27,7 +27,9 @@ describe('LogDirectorySource', function () {
 			const result = await vfs.read(0, 500);
 			expect(result).to.be.an.instanceof(Uint8Array);
 			expect(result).to.have.lengthOf(500);
-			expect(result[0]).to.equal(EventTypes.STARTING_UP);
+			expect(result[0]).to.equal(ESCAPE);
+			expect(result[1]).to.equal(ESCAPE_CODE_SLICEMARKER);
+			expect(result[2]).to.equal(EventTypes.STARTING_UP);
 		});
 
 		it('can return data that spans multiple files', async function () {
@@ -36,6 +38,7 @@ describe('LogDirectorySource', function () {
 			const result = await vfs.read(1024 * 200, 1024 * 500);
 			expect(result).to.be.an.instanceof(Uint8Array);
 			expect(result).to.have.lengthOf(1024 * 500);
+			expect(result[0]).to.not.equal(ESCAPE);
 			expect(result[0]).to.not.equal(EventTypes.STARTING_UP);
 			expect(result.lastIndexOf(SEPARATOR)).to.be.above(1024 * 450);
 		});
@@ -46,6 +49,7 @@ describe('LogDirectorySource', function () {
 			const result = await vfs.read(1024 * 200, 1024 * 500);
 			expect(result).to.be.an.instanceof(Uint8Array);
 			expect(result).to.have.lengthOf(1024 * 500);
+			expect(result[0]).to.not.equal(ESCAPE);
 			expect(result[0]).to.not.equal(EventTypes.STARTING_UP);
 			expect(result.lastIndexOf(SEPARATOR)).to.be.above(1024 * 450);
 		});
@@ -55,6 +59,7 @@ describe('LogDirectorySource', function () {
 			const result = await vfs.read(1024 * 900, 1024 * 200);
 			expect(result).to.be.an.instanceof(Uint8Array);
 			expect(result).to.have.lengthOf(await vfs.size() - 1024 * 900);
+			expect(result[0]).to.not.equal(ESCAPE);
 			expect(result[0]).to.not.equal(EventTypes.STARTING_UP);
 			expect(result.lastIndexOf(SEPARATOR)).to.be.above(1024 * 100);
 		});
@@ -64,6 +69,7 @@ describe('LogDirectorySource', function () {
 			const result1 = await vfs.read(1024 * 900, 1024 * 200);
 			expect(result1).to.be.an.instanceof(Uint8Array);
 			expect(result1.byteLength).to.be.below(1024 * 200);
+			expect(result1[0]).to.not.equal(ESCAPE);
 			expect(result1[0]).to.not.equal(EventTypes.STARTING_UP);
 			expect(result1.lastIndexOf(SEPARATOR)).to.be.above(1024 * 100);
 			await writeLogs(context, 500);
@@ -90,6 +96,7 @@ describe('LogDirectorySource', function () {
 			const result1 = await vfs.read(1024 * 900, 1024 * 900);
 			expect(result1).to.be.an.instanceof(Uint8Array);
 			expect(result1.byteLength).to.be.below(1024 * 200);
+			expect(result1[0]).to.not.equal(ESCAPE);
 			expect(result1[0]).to.not.equal(EventTypes.STARTING_UP);
 			expect(result1.lastIndexOf(SEPARATOR)).to.be.above(1024 * 100);
 			expect(Buffer.from(result1).includes('helloworld')).to.be.false;
@@ -100,6 +107,7 @@ describe('LogDirectorySource', function () {
 			const result2 = await vfs.read(1024 * 900, 1024 * 900);
 			expect(result2).to.be.an.instanceof(Uint8Array);
 			expect(result2.byteLength).to.be.above(1024 * 200);
+			expect(result2[0]).to.not.equal(ESCAPE);
 			expect(result2[0]).to.not.equal(EventTypes.STARTING_UP);
 			expect(result2.lastIndexOf(SEPARATOR)).to.be.above(1024 * 200);
 			expect(Buffer.from(result2).includes('helloworld')).to.be.true;
@@ -124,6 +132,7 @@ describe('LogDirectorySource', function () {
 			const result = await vfs.read(1024 * 900, 1024 * 900);
 			expect(result).to.be.an.instanceof(Uint8Array);
 			expect(result.byteLength).to.be.above(1024 * 200);
+			expect(result[0]).to.not.equal(ESCAPE);
 			expect(result[0]).to.not.equal(EventTypes.STARTING_UP);
 			expect(result.lastIndexOf(SEPARATOR)).to.be.above(1024 * 200);
 			expect(Buffer.from(result).includes('helloworld')).to.be.true;
@@ -144,6 +153,7 @@ describe('LogDirectorySource', function () {
 			const result1 = await vfs.read(1024 * 900, 1024 * 200);
 			expect(result1).to.be.an.instanceof(Uint8Array);
 			expect(result1.byteLength).to.be.below(1024 * 200);
+			expect(result1[0]).to.not.equal(ESCAPE);
 			expect(result1[0]).to.not.equal(EventTypes.STARTING_UP);
 			expect(result1.lastIndexOf(SEPARATOR)).to.be.above(1024 * 100);
 			await writeLogs(context, 500);
@@ -157,6 +167,7 @@ describe('LogDirectorySource', function () {
 			const result1 = await vfs.read(1024 * 900, 1024 * 200);
 			expect(result1).to.be.an.instanceof(Uint8Array);
 			expect(result1.byteLength).to.be.below(1024 * 200);
+			expect(result1[0]).to.not.equal(ESCAPE);
 			expect(result1[0]).to.not.equal(EventTypes.STARTING_UP);
 			expect(result1.lastIndexOf(SEPARATOR)).to.be.above(1024 * 100);
 			await inContext(context, (logger) => {
@@ -189,7 +200,9 @@ describe('LogDirectorySource', function () {
 			vfs = await createVfs(context);
 			const result = await vfs.read(0, 9999999);
 			expect(result).to.be.an.instanceof(Uint8Array);
-			expect(result[0]).to.equal(EventTypes.STARTING_UP);
+			expect(result[0]).to.equal(ESCAPE);
+			expect(result[1]).to.equal(ESCAPE_CODE_SLICEMARKER);
+			expect(result[2]).to.equal(EventTypes.STARTING_UP);
 			expect(await vfs.size()).to.equal(result.byteLength);
 		});
 
